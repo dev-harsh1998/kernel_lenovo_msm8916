@@ -285,6 +285,11 @@ bool is_touch_screen_suspended(void){
 	return ft5x06_ts->suspended;
 }
 
+#ifdef CONFIG_INTELLI_PLUG
+extern void intelli_plug_suspend(void);
+extern void __ref intelli_plug_resume(void);
+#endif
+
 static struct sensors_classdev __maybe_unused sensors_proximity_cdev = {
 	.name = "ft5x06-proximity",
 	.vendor = "FocalTech",
@@ -1211,6 +1216,10 @@ static int ft5x06_ts_suspend(struct device *dev)
 
 	do_sync();
 
+#ifdef CONFIG_INTELLI_PLUG
+	intelli_plug_resume();
+#endif
+
 #ifdef CONFIG_WAKE_GESTURES
 	if (device_may_wakeup(dev) && (s2w_switch || dt2w_switch)) {
 		ft5x0x_write_reg(data->client, 0xD0, 1);
@@ -1260,6 +1269,11 @@ static int ft5x06_ts_resume(struct device *dev)
 #ifdef CONFIG_WAKE_GESTURES
 	int i;
 #endif
+
+#ifdef CONFIG_INTELLI_PLUG
+	intelli_plug_suspend();
+#endif
+
 	if (!data->suspended) {
 		dev_dbg(dev, "Already in awake state\n");
 		return 0;
