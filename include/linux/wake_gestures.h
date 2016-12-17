@@ -30,8 +30,6 @@ extern int dt2w_switch;
 extern int dt2w_switch_temp;
 extern bool dt2w_switch_changed;
 extern bool gestures_enabled;
-bool scr_suspended(void);
 bool scr_suspended_ft(void);
-void set_vibrate(int value);
 
 #endif	/* _LINUX_WAKE_GESTURES_H */
