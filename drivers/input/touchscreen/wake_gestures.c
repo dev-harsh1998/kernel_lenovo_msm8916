@@ -47,15 +47,15 @@
 /* a6000 */
 #define SWEEP_Y_MAX             1280
 #define SWEEP_X_MAX             720
-#define SWEEP_EDGE		90
+#define SWEEP_EDGE		65
 #define SWEEP_Y_LIMIT           SWEEP_Y_MAX-SWEEP_EDGE
 #define SWEEP_X_LIMIT           SWEEP_X_MAX-SWEEP_EDGE
-#define SWEEP_X_B1              299
-#define SWEEP_X_B2              620
-#define SWEEP_Y_START		800
-#define SWEEP_X_START		540
-#define SWEEP_X_FINAL           270
-#define SWEEP_Y_NEXT            135
+#define SWEEP_X_B1              216
+#define SWEEP_X_B2              480
+#define SWEEP_Y_START		533
+#define SWEEP_X_START		360
+#define SWEEP_X_FINAL           180
+#define SWEEP_Y_NEXT            150
 #define DT2W_FEATHER		150
 #define DT2W_TIME 		500
 
