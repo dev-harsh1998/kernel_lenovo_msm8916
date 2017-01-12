@@ -42,7 +42,6 @@ struct thermal_config {
 	enum qpnp_vadc_channels adc_chan;
 	uint8_t enabled;
 	uint32_t sampling_ms;
-	uint32_t user_maxfreq;
 };
 
 struct thermal_zone {
@@ -159,7 +158,7 @@ static int do_cpu_throttle(struct notifier_block *nb,
 {
 	struct cpufreq_policy *policy = data;
 	struct thermal_policy *t = t_policy_g;
-	uint32_t throttle_freq, user_max;
+	uint32_t throttle_freq;
 
 	if (val != CPUFREQ_ADJUST)
 		return NOTIFY_OK;
@@ -169,14 +168,7 @@ static int do_cpu_throttle(struct notifier_block *nb,
 	user_max = t->conf.user_maxfreq;
 	spin_unlock(&t->lock);
 
-	if (throttle_freq) {
-		if (user_max && (user_max < throttle_freq))
-			policy->max = user_max;
-		else
-			policy->max = throttle_freq;
-	} else {
-		policy->max = user_max ? user_max : policy->cpuinfo.max_freq;
-	}
+	policy->max = throttle_freq ? throttle_freq : policy->cpuinfo.max_freq;
 
 	if (policy->min > policy->max)
 		policy->min = policy->max;
@@ -304,24 +296,6 @@ static ssize_t thermal_zone_write(struct device *dev,
 	return size;
 }
 
-static ssize_t user_maxfreq_write(struct device *dev,
-		struct device_attribute *attr, const char *buf, size_t size)
-{
-	struct thermal_policy *t = t_policy_g;
-	uint32_t data;
-	int ret;
-
-	ret = sscanf(buf, "%u", &data);
-	if (ret != 1)
-		return -EINVAL;
-
-	spin_lock(&t->lock);
-	t->conf.user_maxfreq = data ? get_valid_cpufreq(0, data) : 0;
-	spin_unlock(&t->lock);
-
-	return size;
-}
-
 static ssize_t enabled_read(struct device *dev,
 		struct device_attribute *attr, char *buf)
 {
@@ -350,17 +324,8 @@ static ssize_t thermal_zone_read(struct device *dev,
 	return snprintf(buf, PAGE_SIZE, "%u %lld %lld\n", t->zone[idx].freq, t->zone[idx].trip_degC, t->zone[idx].reset_degC);
 }
 
-static ssize_t user_maxfreq_read(struct device *dev,
-		struct device_attribute *attr, char *buf)
-{
-	struct thermal_policy *t = t_policy_g;
-
-	return snprintf(buf, PAGE_SIZE, "%u\n", t->conf.user_maxfreq);
-}
-
 static DEVICE_ATTR(enabled, 0644, enabled_read, enabled_write);
 static DEVICE_ATTR(sampling_ms, 0644, sampling_ms_read, sampling_ms_write);
-static DEVICE_ATTR(user_maxfreq, 0644, user_maxfreq_read, user_maxfreq_write);
 static DEVICE_ATTR(zone0, 0644, thermal_zone_read, thermal_zone_write);
 static DEVICE_ATTR(zone1, 0644, thermal_zone_read, thermal_zone_write);
 static DEVICE_ATTR(zone2, 0644, thermal_zone_read, thermal_zone_write);
@@ -377,7 +342,6 @@ static DEVICE_ATTR(zone11, 0644, thermal_zone_read, thermal_zone_write);
 static struct attribute *msm_thermal_attr[] = {
 	&dev_attr_enabled.attr,
 	&dev_attr_sampling_ms.attr,
-	&dev_attr_user_maxfreq.attr,
 	&dev_attr_zone0.attr,
 	&dev_attr_zone1.attr,
 	&dev_attr_zone2.attr,
