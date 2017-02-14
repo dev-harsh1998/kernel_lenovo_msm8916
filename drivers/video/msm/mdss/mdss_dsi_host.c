@@ -962,13 +962,23 @@ void mdss_dsi_cmd_bta_sw_trigger(struct mdss_panel_data *pdata)
 	pr_debug("%s: BTA done, status = %d\n", __func__, status);
 }
 
+
+#ifdef CONFIG_MACH_WT86518
+static int mdss_dsi_read_status(struct mdss_dsi_ctrl_pdata *ctrl, int i)
+#else
 static int mdss_dsi_read_status(struct mdss_dsi_ctrl_pdata *ctrl)
+#endif
 {
 	struct dcs_cmd_req cmdreq;
 
 	memset(&cmdreq, 0, sizeof(cmdreq));
+#ifdef CONFIG_MACH_WT86518
+	cmdreq.cmds = ctrl->status_cmds[i].cmds;
+	cmdreq.cmds_cnt = ctrl->status_cmds[i].cmd_cnt;
+#else
 	cmdreq.cmds = ctrl->status_cmds.cmds;
 	cmdreq.cmds_cnt = ctrl->status_cmds.cmd_cnt;
+#endif
 	cmdreq.flags = CMD_REQ_COMMIT | CMD_CLK_CTRL | CMD_REQ_RX;
 	cmdreq.rlen = ctrl->status_cmds_rlen;
 	cmdreq.cb = NULL;
@@ -991,6 +1001,10 @@ static int mdss_dsi_read_status(struct mdss_dsi_ctrl_pdata *ctrl)
 int mdss_dsi_reg_status_check(struct mdss_dsi_ctrl_pdata *ctrl_pdata)
 {
 	int ret = 0;
+#ifdef CONFIG_MACH_WT86518
+	int i,j;
+	u32 value;
+#endif
 
 	if (ctrl_pdata == NULL) {
 		pr_err("%s: Invalid input data\n", __func__);
@@ -998,7 +1012,51 @@ int mdss_dsi_reg_status_check(struct mdss_dsi_ctrl_pdata *ctrl_pdata)
 	}
 
 	pr_debug("%s: Checking Register status\n", __func__);
+#ifdef CONFIG_MACH_WT86518
+	for(i=0;i<ctrl_pdata->status_cmds_num;i++)
+	{
+		value = 0;
+		mdss_dsi_clk_ctrl(ctrl_pdata, DSI_ALL_CLKS, 1);
 
+		if (ctrl_pdata->status_cmds[i].link_state == DSI_HS_MODE)
+			mdss_dsi_set_tx_power_mode(0, &ctrl_pdata->panel_data);
+
+		ret = mdss_dsi_read_status(ctrl_pdata, i);
+
+		if (ctrl_pdata->status_cmds[i].link_state == DSI_HS_MODE)
+			mdss_dsi_set_tx_power_mode(1, &ctrl_pdata->panel_data);
+
+		/*
+		 * mdss_dsi_read_status returns the number of bytes returned
+		 * by the panel. Success value is greater than zero and failure
+	 	* case returns zero.
+	 	*/
+		if (ret > 0) {
+			for(j=0;j<ctrl_pdata->status_value[i][0];j++)
+			{
+				value = (value << 8) | ctrl_pdata->status_buf.data[j];
+			}
+			
+			pr_err("%s: Read back value from panel is: %x\n", __func__, value);
+			
+			if(value != ctrl_pdata->status_value[i][1])
+			{
+				pr_err("%s: Read back value from panel is incorrect\n",
+								__func__);
+				mdss_dsi_clk_ctrl(ctrl_pdata, DSI_ALL_CLKS, 0);			
+				return -EINVAL;
+			} else
+			{
+				mdss_dsi_clk_ctrl(ctrl_pdata, DSI_ALL_CLKS, 0);
+				ret = 1;
+			}
+		} else {
+			pr_err("%s: Read status register returned error\n", __func__);
+			mdss_dsi_clk_ctrl(ctrl_pdata, DSI_ALL_CLKS, 0);
+			return ret;
+		}
+	}
+#else
 	mdss_dsi_clk_ctrl(ctrl_pdata, DSI_ALL_CLKS, 1);
 
 	if (ctrl_pdata->status_cmds.link_state == DSI_HS_MODE)
@@ -1019,8 +1077,10 @@ int mdss_dsi_reg_status_check(struct mdss_dsi_ctrl_pdata *ctrl_pdata)
 	} else {
 		pr_err("%s: Read status register returned error\n", __func__);
 	}
-
+#endif
+#ifndef CONFIG_MACH_WT86518
 	mdss_dsi_clk_ctrl(ctrl_pdata, DSI_ALL_CLKS, 0);
+#endif
 	pr_debug("%s: Read register done with ret: %d\n", __func__, ret);
 
 	return ret;
@@ -1482,6 +1542,9 @@ static struct dsi_cmd_desc pkt_size_cmd = {
  * 3rd read: 14 bytes payload + 2 crc
  *
  */
+#ifdef CONFIG_MACH_WT86518
+extern int Packet_PLAG;
+#endif
 int mdss_dsi_cmds_rx(struct mdss_dsi_ctrl_pdata *ctrl,
 			struct dsi_cmd_desc *cmds, int rlen, int use_dma_tpg)
 {
@@ -1551,6 +1614,38 @@ do_send:
 	while (!end) {
 		pr_debug("%s:  rlen=%d pkt_size=%d rx_byte=%d\n",
 				__func__, rlen, pkt_size, rx_byte);
+#ifdef CONFIG_MACH_WT86518
+		if(Packet_PLAG==0){
+			max_pktsize[0] = pkt_size;
+			mdss_dsi_buf_init(tp);
+			ret = mdss_dsi_cmd_dma_add(tp, &pkt_size_cmd);
+			if (!ret) {
+				pr_err("%s: failed to add max_pkt_size\n",
+					__func__);
+				rp->len = 0;
+				rp->read_cnt = 0;
+				goto end;
+			}
+
+			mdss_dsi_wait4video_eng_busy(ctrl);
+
+			mdss_dsi_enable_irq(ctrl, DSI_CMD_TERM);
+			ret = mdss_dsi_cmd_dma_tx(ctrl, tp);
+			if (IS_ERR_VALUE(ret)) {
+				mdss_dsi_disable_irq(ctrl, DSI_CMD_TERM);
+				pr_err("%s: failed to tx max_pkt_size\n",
+					__func__);
+				rp->len = 0;
+				rp->read_cnt = 0;
+				goto end;
+			}
+
+			Packet_PLAG = 1;
+			pr_debug("%s: max_pkt_size=%d sent\n",
+						__func__, pkt_size);
+			
+		}
+#else
 		max_pktsize[0] = pkt_size;
 		mdss_dsi_buf_init(tp);
 		ret = mdss_dsi_cmd_dma_add(tp, &pkt_size_cmd);
@@ -1579,7 +1674,7 @@ do_send:
 		}
 		pr_debug("%s: max_pkt_size=%d sent\n",
 					__func__, pkt_size);
-
+#endif
 		mdss_dsi_buf_init(tp);
 		ret = mdss_dsi_cmd_dma_add(tp, cmds);
 		if (!ret) {

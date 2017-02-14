@@ -23,6 +23,9 @@
 #include <linux/err.h>
 
 #include "mdss_dsi.h"
+#ifdef CONFIG_MACH_WT86518
+#include <linux/hardware_info.h> //req  wuzhenzhen.wt 20140924 add for hardware info
+#endif
 #include "mdss_livedisplay.h"
 
 #define DT_CMD_HDR 6
@@ -42,7 +45,9 @@
 #endif
 
 DEFINE_LED_TRIGGER(bl_led_trigger);
-
+#ifdef CONFIG_MACH_WT86518
+extern bool is_Lcm_Present;//heming@wingtech.com,20140730, disable lcm backlight when lcm is not connected
+#endif
 void mdss_dsi_panel_pwm_cfg(struct mdss_dsi_ctrl_pdata *ctrl)
 {
 	if (ctrl->pwm_pmi)
@@ -53,7 +58,11 @@ void mdss_dsi_panel_pwm_cfg(struct mdss_dsi_ctrl_pdata *ctrl)
 		pr_err("%s: Error: lpg_chan=%d pwm request failed",
 				__func__, ctrl->pwm_lpg_chan);
 	}
+#ifdef CONFIG_MACH_WT86518
+	ctrl->pwm_enabled = 1;//hoper
+#else
 	ctrl->pwm_enabled = 0;
+#endif
 }
 
 static void mdss_dsi_panel_bklt_pwm(struct mdss_dsi_ctrl_pdata *ctrl, int level)
@@ -1219,6 +1228,7 @@ static int mdss_dsi_parse_reset_seq(struct device_node *np,
 	return 0;
 }
 
+#ifndef CONFIG_MACH_WT86518
 static int mdss_dsi_gen_read_status(struct mdss_dsi_ctrl_pdata *ctrl_pdata)
 {
 	if (ctrl_pdata->status_buf.data[0] !=
@@ -1262,6 +1272,7 @@ static int mdss_dsi_nt35596_read_status(struct mdss_dsi_ctrl_pdata *ctrl_pdata)
 		return 1;
 	}
 }
+#endif
 
 #ifdef CONFIG_MACH_CP8675
 static int mdss_dsi_yl_read_status(struct mdss_dsi_ctrl_pdata *ctrl_pdata)
@@ -1668,6 +1679,54 @@ static void mdss_dsi_set_lane_clamp_mask(struct mipi_panel_info *mipi)
 	mipi->phy_lane_clamp_mask = mask;
 }
 
+#ifdef CONFIG_MACH_WT86518
+//+Other_LCD wuzhenzhen.wt,MODIFY,2014/1/15,modify LCD ESD check methods to read multiful registers and values*/
+void mdss_dsi_parse_status_command(struct device_node *np, struct mdss_dsi_ctrl_pdata *ctrl_pdata)
+{
+	int i=0;
+	char cmd_key[] = "qcom,mdss-dsi-panel-status-command1";
+	int cmd_len = strlen(cmd_key);
+	for(i = 1;i <= ctrl_pdata->status_cmds_num;i++)
+	{
+		cmd_key[cmd_len-1] = i + '0';	
+		mdss_dsi_parse_dcs_cmds(np, &ctrl_pdata->status_cmds[i-1],
+			cmd_key, "qcom,mdss-dsi-panel-status-command-state");
+	}
+}
+int mdss_dsi_parse_status_value(struct device_node *np, struct mdss_dsi_ctrl_pdata *ctrl_pdata)
+{
+	int len = 0;	
+	int i = 0,rc=0;
+	struct property *data;
+	char cmd_key[] = "qcom,mdss-dsi-panel-status-value1";
+	int j = 1;	
+	u32 sta_val[5];
+	int cmd_len = strlen(cmd_key);
+	
+	for(j = 1;j <= ctrl_pdata->status_cmds_num;j++)
+	{
+		cmd_key[cmd_len-1] = j + '0';
+		data = of_find_property(np, cmd_key, &len);
+		len /= sizeof(u32);
+		if (!data ) {
+			pr_err("%s: failed, key=%s\n", __func__, cmd_key);
+			return 0;
+		} else {
+			rc = of_property_read_u32_array(np,cmd_key,sta_val,len);
+			if (rc)
+			{
+				pr_err("%s: Error reading qcom,mdss-dsi-panel-status-value",__func__);
+				return 0;
+			} else {
+				for(i=0;i<len;i++)
+				ctrl_pdata->status_value[j-1][i]= sta_val[i];
+			}
+		}
+	}
+	return 1;
+}
+//-Other_LCD wuzhenzhen.wt,MODIFY,2014/1/15,modify LCD ESD check methods to read multiful registers and values*/
+#endif
 
 static int mdss_panel_parse_dt(struct device_node *np,
 			struct mdss_dsi_ctrl_pdata *ctrl_pdata)
@@ -2011,13 +2070,29 @@ static int mdss_panel_parse_dt(struct device_node *np,
 			"qcom,panel-backlight-response-curve");
 #endif
 
+#ifdef CONFIG_MACH_WT86518
+	//+Other_LCD wuzhenzhen.wt,MODIFY,2014/12/25,modify LCD ESD check methods to read multiful registers and values*/
+
+	rc = of_property_read_u32(np, "qcom,mdss-dsi-panel-status-command-num", &tmp);
+	ctrl_pdata->status_cmds_num = (!rc ? tmp : 0);
+
+	mdss_dsi_parse_status_command(np, ctrl_pdata);
+	
+	rc = mdss_dsi_parse_status_value(np, ctrl_pdata);
+	if (!rc) {
+		pr_err("%s: failed to parse panel status_value\n", __func__);
+		goto error;
+	}
+	//-Other_LCD wuzhenzhen.wt,MODIFY,2014/12/25,modify LCD ESD check methods to read multiful registers and values*/
+#endif
+
+#ifndef CONFIG_MACH_WT86518
 	mdss_dsi_parse_dcs_cmds(np, &ctrl_pdata->status_cmds,
 			"qcom,mdss-dsi-panel-status-command",
 				"qcom,mdss-dsi-panel-status-command-state");
 	rc = of_property_read_u32(np, "qcom,mdss-dsi-panel-status-value", &tmp);
 	ctrl_pdata->status_value = (!rc ? tmp : 0);
-
-
+#endif
 	ctrl_pdata->status_mode = ESD_MAX;
 	rc = of_property_read_string(np,
 				"qcom,mdss-dsi-panel-status-check-mode", &data);
@@ -2026,15 +2101,27 @@ static int mdss_panel_parse_dt(struct device_node *np,
 			ctrl_pdata->status_mode = ESD_BTA;
 		} else if (!strcmp(data, "reg_read")) {
 			ctrl_pdata->status_mode = ESD_REG;
-			ctrl_pdata->status_cmds_rlen = 1;
+#ifdef CONFIG_MACH_WT86518
+		ctrl_pdata->status_cmds_rlen = 4;
+		//	ctrl_pdata->check_read_status =
+		//				mdss_dsi_gen_read_status;
+#else
+		ctrl_pdata->status_cmds_rlen = 1;
 			ctrl_pdata->check_read_status =
 						mdss_dsi_gen_read_status;
+#endif
 		} else if (!strcmp(data, "reg_read_nt35596")) {
 			ctrl_pdata->status_mode = ESD_REG_NT35596;
 			ctrl_pdata->status_error_count = 0;
 			ctrl_pdata->status_cmds_rlen = 8;
+#ifdef CONFIG_MACH_WT86518
+		//	ctrl_pdata->check_read_status =
+		//				mdss_dsi_nt35596_read_status;
+		} else if (!strcmp(data, "te_signal_check")) {
+#else
 			ctrl_pdata->check_read_status =
 						mdss_dsi_nt35596_read_status;
+#endif
 		} else if (!strcmp(data, "te_signal_check")) {
 			if (pinfo->mipi.mode == DSI_CMD_MODE)
 				ctrl_pdata->status_mode = ESD_TE;
@@ -2076,6 +2163,56 @@ error:
 	return -EINVAL;
 }
 
+#ifdef LCM_SUPPORT_READ_VERSION
+static int mdss_panel_parse_panel_name(struct device_node *node)
+{
+	const char *name;
+
+	name = of_get_property(node,
+						//"label", NULL);
+						"qcom,mdss-dsi-panel-name", NULL);
+	strcpy(g_lcm_id, name);
+	return 0;
+}
+
+static ssize_t msm_fb_lcd_name(struct device *dev,
+				  struct device_attribute *attr, char *buf)
+{
+	ssize_t ret = 0;
+
+	sprintf(buf, "%s\n", g_lcm_id);
+	ret = strlen(buf) + 1;
+
+	return ret;
+}
+
+static DEVICE_ATTR(lcd_name, 0644, msm_fb_lcd_name, NULL);
+
+static struct kobject *msm_lcd_name;
+static int msm_lcd_name_create_sysfs(void)
+{
+	int ret ;
+
+	msm_lcd_name = kobject_create_and_add("android_lcd", NULL);
+	if (msm_lcd_name == NULL) {
+		pr_info("msm_lcd_name_create_sysfs	failed!\n");
+		ret = -ENOMEM;
+		return ret ;
+	}
+
+	ret = sysfs_create_file(msm_lcd_name, &dev_attr_lcd_name.attr);
+	if (ret) {
+		pr_info("%s failed\n",__func__);
+		kobject_del(msm_lcd_name);
+	}
+	return 0 ;
+}
+#endif
+
+#ifdef CONFIG_MACH_WT86518
+extern char Lcm_name[HARDWARE_MAX_ITEM_LONGTH]; //req  wuzhenzhen.wt 20140924 add for hardware info
+#endif
+
 int mdss_dsi_panel_init(struct device_node *node,
 	struct mdss_dsi_ctrl_pdata *ctrl_pdata,
 	bool cmd_cfg_cont_splash)
@@ -2100,7 +2237,19 @@ int mdss_dsi_panel_init(struct device_node *node,
 	} else {
 		pr_info("%s: Panel Name = %s\n", __func__, panel_name);
 		strlcpy(&pinfo->panel_name[0], panel_name, MDSS_MAX_PANEL_LEN);
+#ifdef CONFIG_MACH_WT86518
+		strcpy(Lcm_name,panel_name);//req  wuzhenzhen.wt 20140924 add for hardware info
+#endif
 	}
+
+#ifdef LCM_SUPPORT_READ_VERSION
+		rc = mdss_panel_parse_panel_name(node);
+		if (rc) {
+			pr_err("fail to parse panel label\n");
+			return rc;
+		}
+#endif
+
 	rc = mdss_panel_parse_dt(node, ctrl_pdata);
 	if (rc) {
 		pr_err("%s:%d panel dt parse failed\n", __func__, __LINE__);
@@ -2120,8 +2269,15 @@ int mdss_dsi_panel_init(struct device_node *node,
 	ctrl_pdata->on = mdss_dsi_panel_on;
 	ctrl_pdata->post_panel_on = mdss_dsi_post_panel_on;
 	ctrl_pdata->off = mdss_dsi_panel_off;
-	ctrl_pdata->low_power_config = mdss_dsi_panel_low_power_config;
+#ifdef CONFIG_MACH_WT86518
+	if(is_Lcm_Present)//heming@wingtech.com,20140730, disable lcm backlight when lcm is not connected
+	{
+		ctrl_pdata->panel_data.set_backlight = mdss_dsi_panel_bl_ctrl;
+	}
+#else
 	ctrl_pdata->panel_data.set_backlight = mdss_dsi_panel_bl_ctrl;
+#endif
+	ctrl_pdata->low_power_config = mdss_dsi_panel_low_power_config;
 	ctrl_pdata->switch_mode = mdss_dsi_panel_switch_mode;
 
 	return 0;
