@@ -3827,6 +3827,7 @@ static int synaptics_rmi4_probe(struct i2c_client *client,
 			goto err_sysfs;
 		}
 	}
+#ifndef CONFIG_MACH_WT86518
 #ifdef SUPPORT_READ_TP_VERSION
 {
 	char tp_version[60] = {0};
@@ -3839,6 +3840,7 @@ static int synaptics_rmi4_probe(struct i2c_client *client,
 	}
 	strcpy(g_Id_save,tp_version); //baron modify
 }
+#endif
 #endif
 
 	synaptics_rmi4_sensor_wake(rmi4_data);
