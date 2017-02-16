@@ -860,6 +860,19 @@ config SENSORS_BMI058
 	 If you say yes here, you get support for Bosch Sensortec's
 	 sensor driver of BMI058.
 
+config SENSORS_ELAN_EPL2182
+	tristate "ELAN EPL2182 proximity and ambient light sensor"
+	depends on I2C=y
+	help
+	  If you say yes here you get support for ELAN's light/proximity sensors epl2182.
+
+config DISPSENSOR_CAMERA_OPEN
+	tristate "Disable Psensor when open camera in calling"
+	depends on SENSORS_ELAN_EPL2182
+	default n
+	help
+	  If you say yes here you get support for ELAN's light/proximity sensors epl2182.
+
 config SENSORS_BMI160
 	tristate "BMI160 Sensor Support"
 	depends on I2C || SPI_MASTER
