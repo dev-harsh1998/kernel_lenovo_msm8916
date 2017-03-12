@@ -74,6 +74,7 @@
 #define AW8155A_MODE 5
 static struct delayed_work lineout_amp_enable;
 static struct delayed_work lineout_amp_dualmode;
+static struct delayed_work lineout_amp_disable;
 #endif
 
 #define MAX_AUX_CODECS	2
@@ -632,22 +633,6 @@ static int mi2s_rx_bit_format_put(struct snd_kcontrol *kcontrol,
 }
 
 #ifdef CONFIG_MACH_WT86518
-static void msm8x16_ext_spk_control(u32 enable)
-{
-	if (enable) {
-		gpio_direction_output(EXT_SPK_AMP_GPIO, enable);
-		usleep_range(EXT_CLASS_D_EN_DELAY,
-				EXT_CLASS_D_EN_DELAY + EXT_CLASS_D_DELAY_DELTA);
-	} else {
-		gpio_direction_output(EXT_SPK_AMP_GPIO, enable);
-		usleep_range(EXT_CLASS_D_DIS_DELAY,
-				EXT_CLASS_D_DIS_DELAY + EXT_CLASS_D_DELAY_DELTA);
-	}
-
-	pr_debug("%s: %s external speaker PAs.\n", __func__,
-			enable ? "Enable" : "Disable");
-}
-
 static void msm8x16_ext_spk_delayed_enable(struct work_struct *work)
 {
 	int i = 0;
@@ -681,6 +666,26 @@ static void msm8x16_ext_spk_delayed_dualmode(struct work_struct *work)
 	usleep_range(EXT_CLASS_D_EN_DELAY,
 			EXT_CLASS_D_EN_DELAY + EXT_CLASS_D_DELAY_DELTA);
 }
+static void msm8x16_ext_spk_delayed_disable(struct work_struct *work)
+{
+    int i = 0;
+
+    /* Close the headset device */
+    gpio_direction_output(EXT_SPK_AMP_HEADSET_GPIO, false);
+    usleep_range(EXT_CLASS_D_EN_DELAY,
+        EXT_CLASS_D_EN_DELAY + EXT_CLASS_D_DELAY_DELTA);
+
+   /* Close external audio PA device */
+    for(i = 0; i < AW8155A_MODE; i++) {
+        gpio_direction_output(EXT_SPK_AMP_GPIO, false);
+        gpio_direction_output(EXT_SPK_AMP_GPIO, false);
+    }
+    usleep_range(EXT_CLASS_D_EN_DELAY,
+        EXT_CLASS_D_EN_DELAY + EXT_CLASS_D_DELAY_DELTA);
+
+    pr_debug("%s: Disable external speaker PAs.\n", __func__);
+}
+
 static int lineout_status_get(struct snd_kcontrol *kcontrol,
 	struct snd_ctl_elem_value *ucontrol)
 {
@@ -693,11 +698,11 @@ static int lineout_status_put(struct snd_kcontrol *kcontrol,
 	state = ucontrol->value.integer.value[0];
 
 	switch (state) {
+	case 0:
+		schedule_delayed_work(&lineout_amp_disable, msecs_to_jiffies(50));
+		break;
 	case 1:
 		schedule_delayed_work(&lineout_amp_enable, msecs_to_jiffies(50));
-		break;
-	case 0:
-		msm8x16_ext_spk_control(0);
 		break;
 	case 2:
 		schedule_delayed_work(&lineout_amp_dualmode, msecs_to_jiffies(50));
@@ -1962,6 +1967,7 @@ static int msm_audrx_init(struct snd_soc_pcm_runtime *rtd)
 #ifdef CONFIG_MACH_WT86518
 	INIT_DELAYED_WORK(&lineout_amp_enable, msm8x16_ext_spk_delayed_enable);
 	INIT_DELAYED_WORK(&lineout_amp_dualmode, msm8x16_ext_spk_delayed_dualmode);
+	INIT_DELAYED_WORK(&lineout_amp_disable, msm8x16_ext_spk_delayed_disable);
 #endif
 
 	return msm8x16_wcd_hs_detect(codec, &mbhc_cfg);
