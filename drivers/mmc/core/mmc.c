@@ -25,6 +25,9 @@
 #include "bus.h"
 #include "mmc_ops.h"
 #include "sd_ops.h"
+#ifdef CONFIG_MACH_WT86518
+#include <linux/hardware_info.h>
+#endif
 
 static const unsigned int tran_exp[] = {
 	10000,		100000,		1000000,	10000000,
@@ -141,7 +144,9 @@ static int mmc_decode_cid(struct mmc_card *card)
 			mmc_hostname(card->host), card->csd.mmca_vsn);
 		return -EINVAL;
 	}
-
+#ifdef CONFIG_MACH_WT86518
+	hardwareinfo_set_prop(HARDWARE_FLASH,card->cid.prod_name);
+#endif
 	return 0;
 }
 
