@@ -2064,7 +2064,39 @@ static void mdss_mdp_overlay_pan_display(struct msm_fb_data_type *mfd)
 		       offset, fbi->fix.smem_len);
 		goto pan_display_error;
 	}
+#ifdef CONFIG_MACH_WT86518
+	//+BUG,mahao.wt,MOD,2015.6.17,Resolve blue screen flicker in poweroff charging mode
+	 ret = mdss_mdp_overlay_get_fb_pipe(mfd, &pipe, MDSS_MDP_MIXER_MUX_LEFT);
+	//-BUG,mahao.wt,MOD,2015.6.17,Resolve blue screen flicker in poweroff charging mode
+	if (ret) {
+		pr_err("unable to allocate base pipe\n");//BUG,mahao.wt,MOD,2015.6.17,Resolve blue screen flicker in poweroff charging mode
+		goto pan_display_error;
+	}
 
+	//+BUG,mahao.wt,MOD,2015.6.17,Resolve blue screen flicker in poweroff charging mode
+
+	 if (mdss_mdp_pipe_map(pipe)) {
+                pr_err("unable to map base pipe\n");	
+        //-BUG,mahao.wt,MOD,2015.6.17,Resolve blue screen flicker in poweroff charging mode				
+		goto pan_display_error;
+	}
+
+	//+BUG,mahao.wt,MOD,2015.6.17,Resolve blue screen flicker in poweroff charging mode
+	ret = mdss_mdp_overlay_start(mfd);
+	//-BUG,mahao.wt,MOD,2015.6.17,Resolve blue screen flicker in poweroff charging mode
+      if (ret) {
+		pr_err("unable to start overlay %d (%d)\n", mfd->index, ret);//BUG,mahao.wt,MOD,2015.6.17,Resolve blue screen flicker in poweroff charging mode
+		goto pan_display_error;
+	}
+
+//+BUG,mahao.wt,MOD,2015.6.17,Resolve blue screen flicker in poweroff charging mode
+     ret = mdss_iommu_ctrl(1);
+     if (IS_ERR_VALUE(ret)) {
+                pr_err("IOMMU attach failed\n");	
+//-BUG,mahao.wt,MOD,2015.6.17,Resolve blue screen flicker in poweroff charging mode				
+		goto pan_display_error;
+	}
+#else
 	ret = mdss_mdp_overlay_get_fb_pipe(mfd, &pipe,
 					MDSS_MDP_MIXER_MUX_LEFT);
 	if (ret) {
@@ -2088,6 +2120,7 @@ static void mdss_mdp_overlay_pan_display(struct msm_fb_data_type *mfd)
 		pr_err("IOMMU attach failed\n");
 		goto pan_display_error;
 	}
+#endif
 
 	buf = &pipe->back_buf;
 	if (mdata->mdss_util->iommu_attached()) {
