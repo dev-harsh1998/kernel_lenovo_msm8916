@@ -22,6 +22,9 @@
 #include <linux/slab.h>
 #include <linux/qcom_iommu.h>
 #include <linux/msm_iommu_domains.h>
+#ifdef CONFIG_MACH_WT86518
+#include <linux/pm_qos.h>
+#endif
 #include <media/msm_vidc.h>
 #include "msm_vidc_common.h"
 #include "msm_vidc_debug.h"
@@ -44,7 +47,9 @@ static inline struct msm_vidc_inst *get_vidc_inst(struct file *filp, void *fh)
 	return container_of(filp->private_data,
 					struct msm_vidc_inst, event_handler);
 }
-
+#ifdef CONFIG_MACH_WT86518
+static struct pm_qos_request msm_v4l2_vidc_pm_qos_request;
+#endif
 static int msm_v4l2_open(struct file *filp)
 {
 	struct video_device *vdev = video_devdata(filp);
@@ -61,6 +66,10 @@ static int msm_v4l2_open(struct file *filp)
 		core->id, vid_dev->type);
 		return -ENOMEM;
 	}
+#ifdef CONFIG_MACH_WT86518
+	dprintk(VIDC_ERR, "msm_vidc: pm_qos_add_request, 1000uSec\n");                    
+  pm_qos_add_request(&msm_v4l2_vidc_pm_qos_request, PM_QOS_CPU_DMA_LATENCY, 1000);  
+#endif
 	clear_bit(V4L2_FL_USES_V4L2_FH, &vdev->flags);
 	filp->private_data = &(vidc_inst->event_handler);
 	trace_msm_v4l2_vidc_open_end("msm_v4l2_open end");
@@ -79,8 +88,13 @@ static int msm_v4l2_close(struct file *filp)
 	if (rc)
 		dprintk(VIDC_WARN,
 			"Failed in %s for release output buffers\n", __func__);
-
 	rc = msm_vidc_close(vidc_inst);
+#ifdef CONFIG_MACH_WT86518
+	dprintk(VIDC_ERR, "msm_vidc: pm_qos_update_request, PM_QOS_DEFAULT_VALUE\n");
+  pm_qos_update_request(&msm_v4l2_vidc_pm_qos_request, PM_QOS_DEFAULT_VALUE);  
+  dprintk(VIDC_ERR, "msm_vidc: pm_qos_remove_request\n");                      
+  pm_qos_remove_request(&msm_v4l2_vidc_pm_qos_request);                        
+#endif
 	trace_msm_v4l2_vidc_close_end("msm_v4l2_close end");
 	return rc;
 }
