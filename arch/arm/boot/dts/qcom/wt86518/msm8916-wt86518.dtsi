@@ -141,6 +141,7 @@
 		vio-supply = <&pm8916_l6>;
 		akm,layout = <0x6>;
 		akm,auto-report;
+		akm,use-hrtimer;
 	};
 
 	avago@39 {
