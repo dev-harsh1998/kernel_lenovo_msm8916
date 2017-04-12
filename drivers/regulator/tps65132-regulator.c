@@ -204,7 +204,14 @@ static int tps65132_regulator_set_voltage(struct regulator_dev *rdev,
 		vreg->vol_set_val = val;
 		vreg->vol_set_postpone = true;
 	} else {
+#ifdef CONFIG_MACH_WT86518
+		/*zhanzhimin.wt 2015/02/10 workaround for LCD display abnormality when add tps6132 drvier begin*/
+		//rc = regmap_write(rdev->regmap, vreg->vol_reg, val);
+		rc = 0;
+               /*zhanzhimin.wt 2015/02/10 workaround for LCD display abnormality when add tps6132 drvier end*/
+#else
 		rc = regmap_write(rdev->regmap, vreg->vol_reg, val);
+#endif
 		if (rc) {
 			pr_err("failed to write reg %d, rc = %d\n",
 						vreg->vol_reg, rc);
