@@ -196,8 +196,8 @@
 		regulators {
 			tps65132_pos: pos-boost {
 				regulator-name = "tps65132-pos";
-				regulator-min-microvolt = <5400000>;
-				regulator-max-microvolt = <5400000>;
+				regulator-min-microvolt = <5000000>;
+				regulator-max-microvolt = <5000000>;
 				ti,discharge-enable;
 				ti,enable-time = <800>;
 				ti,current-limit = <200000>;
@@ -206,8 +206,8 @@
 
 			tps65132_neg: neg-boost {
 				regulator-name = "tps65132-neg";
-				regulator-min-microvolt = <5400000>;
-				regulator-max-microvolt = <5400000>;
+				regulator-min-microvolt = <5000000>;
+				regulator-max-microvolt = <5000000>;
 				ti,discharge-enable;
 				ti,enable-time = <800>;
 				ti,current-limit = <40000>;
@@ -245,8 +245,8 @@
             qcom,panel-supply-entry@2 {
                 reg = <2>;
                 qcom,supply-name = "vsp";
-                qcom,supply-min-voltage = <5400000>;
-                qcom,supply-max-voltage = <5400000>;
+                qcom,supply-min-voltage = <5000000>;
+                qcom,supply-max-voltage = <5000000>;
                 qcom,supply-enable-load = <200>;
                 qcom,supply-disable-load = <0>;
             };
@@ -254,8 +254,8 @@
             qcom,panel-supply-entry@3 {
                 reg = <3>;
                 qcom,supply-name = "vsn";
-                qcom,supply-min-voltage = <5400000>;
-                qcom,supply-max-voltage = <5400000>;
+                qcom,supply-min-voltage = <5000000>;
+                qcom,supply-max-voltage = <5000000>;
                 qcom,supply-enable-load = <40>;
                 qcom,supply-disable-load = <0>;
             };
