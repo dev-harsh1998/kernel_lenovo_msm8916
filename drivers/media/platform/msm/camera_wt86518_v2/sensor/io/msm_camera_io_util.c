@@ -250,9 +250,15 @@ int msm_camera_config_vreg(struct device *dev, struct camera_vreg_t *cam_vreg,
 	struct camera_vreg_t *curr_vreg;
 
 	if (num_vreg_seq > num_vreg) {
-		pr_err("%s:%d vreg sequence invalid\n", __func__, __LINE__);
+		  		return -EINVAL;pr_err("%s:%d vreg sequence invalid\n", __func__, __LINE__);
 		return -EINVAL;
 	}
+
+	if (cam_vreg == NULL) {
+		pr_err("%s:%d cam_vreg sequence invalid\n", __func__, __LINE__);
+		return -EINVAL;
+	}
+
 	if (!num_vreg_seq)
 		num_vreg_seq = num_vreg;
 
