@@ -1186,9 +1186,6 @@ static const struct soc_enum tomtom_anc_func_enum =
 		SOC_ENUM_SINGLE_EXT(2, tomtom_anc_func_text);
 
 static const char *const tabla_ear_pa_gain_text[] = {"POS_6_DB", "POS_2_DB"};
-static const struct soc_enum tabla_ear_pa_gain_enum[] = {
-		SOC_ENUM_SINGLE_EXT(2, tabla_ear_pa_gain_text),
-};
 
 /*cut of frequency for high pass filter*/
 static const char * const cf_text[] = {
