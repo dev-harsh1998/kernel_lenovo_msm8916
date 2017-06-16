@@ -1185,8 +1185,6 @@ static const char *const tomtom_anc_func_text[] = {"OFF", "ON"};
 static const struct soc_enum tomtom_anc_func_enum =
 		SOC_ENUM_SINGLE_EXT(2, tomtom_anc_func_text);
 
-static const char *const tabla_ear_pa_gain_text[] = {"POS_6_DB", "POS_2_DB"};
-
 /*cut of frequency for high pass filter*/
 static const char * const cf_text[] = {
 	"MIN_3DB_4Hz", "MIN_3DB_75Hz", "MIN_3DB_150Hz"
