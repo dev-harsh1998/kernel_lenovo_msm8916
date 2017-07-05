@@ -85,6 +85,7 @@ Image-dtb Image.gz-dtb: vmlinux scripts dtbs
 # We use MRPROPER_FILES and CLEAN_FILES now
 archclean:
 	$(Q)$(MAKE) $(clean)=$(boot)
+	$(Q)$(MAKE) $(clean)=$(srctree)/arch/arm/boot
 
 define archhelp
   echo  '* Image.gz      - Compressed kernel image (arch/$(ARCH)/boot/Image.gz)'
