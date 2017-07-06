@@ -1,4 +1,5 @@
 /* Copyright (c) 2013-2017, The Linux Foundation. All rights reserved.
+ * Copyright (C) 2016 XiaoMi, Inc.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -83,7 +84,7 @@ void msm_camera_io_dump_2(void __iomem *addr, int size)
 	int i;
 	u32 *p = (u32 *) addr;
 	u32 data;
-	pr_err("%s: %pK %d\n", __func__, addr, size);
+	pr_err("%s: %p %d\n", __func__, addr, size);
 	line_str[0] = '\0';
 	p_str = line_str;
 	for (i = 0; i < size/4; i++) {
@@ -185,6 +186,9 @@ int msm_isp_update_bandwidth(enum msm_isp_hw_client client,
 	}
 	ISP_DBG("%s: Total AB = %llu IB = %llu\n", __func__,
 			path->vectors[0].ab, path->vectors[0].ib);
+	if (path->vectors[0].ib < 6400000000) {
+		path->vectors[0].ib = 6400000000;
+			}
 	msm_bus_scale_client_update_request(isp_bandwidth_mgr.bus_client,
 		isp_bandwidth_mgr.bus_vector_active_idx);
 	/* Insert into circular buffer */
@@ -270,13 +274,6 @@ uint32_t msm_isp_get_framedrop_period(
 	case EVERY_6FRAME:
 	case EVERY_7FRAME:
 	case EVERY_8FRAME:
-	case EVERY_9FRAME:
-	case EVERY_10FRAME:
-	case EVERY_11FRAME:
-	case EVERY_12FRAME:
-	case EVERY_13FRAME:
-	case EVERY_14FRAME:
-	case EVERY_15FRAME:
 		return frame_skip_pattern + 1;
 	case EVERY_16FRAME:
 		return 16;
@@ -395,14 +392,14 @@ static int msm_isp_get_max_clk_rate(struct vfe_device *vfe_dev, long *rate)
 	long          round_rate = 0;
 
 	if (!vfe_dev || !rate) {
-		pr_err("%s:%d failed: vfe_dev %pK rate %pK\n", __func__, __LINE__,
+		pr_err("%s:%d failed: vfe_dev %p rate %p\n", __func__, __LINE__,
 			vfe_dev, rate);
 		return -EINVAL;
 	}
 
 	*rate = 0;
 	if (!vfe_dev->hw_info) {
-		pr_err("%s:%d failed: vfe_dev->hw_info %pK\n", __func__,
+		pr_err("%s:%d failed: vfe_dev->hw_info %p\n", __func__,
 			__LINE__, vfe_dev->hw_info);
 		return -EINVAL;
 	}
@@ -551,7 +548,7 @@ static int msm_isp_proc_cmd_list_unlocked(struct vfe_device *vfe_dev, void *arg)
 	struct msm_vfe_cfg_cmd_list cmd, cmd_next;
 
 	if (!vfe_dev || !arg) {
-		pr_err("%s:%d failed: vfe_dev %pK arg %pK", __func__, __LINE__,
+		pr_err("%s:%d failed: vfe_dev %p arg %p", __func__, __LINE__,
 			vfe_dev, arg);
 		return -EINVAL;
 	}
@@ -628,7 +625,7 @@ static int msm_isp_proc_cmd_list_compat(struct vfe_device *vfe_dev, void *arg)
 	struct msm_vfe_cfg_cmd2 current_cmd;
 
 	if (!vfe_dev || !arg) {
-		pr_err("%s:%d failed: vfe_dev %pK arg %pK", __func__, __LINE__,
+		pr_err("%s:%d failed: vfe_dev %p arg %p", __func__, __LINE__,
 			vfe_dev, arg);
 		return -EINVAL;
 	}
@@ -690,10 +687,10 @@ static long msm_isp_ioctl_unlocked(struct v4l2_subdev *sd,
 	struct vfe_device *vfe_dev = v4l2_get_subdevdata(sd);
 
 	if (!vfe_dev || !vfe_dev->vfe_base) {
-		pr_err("%s:%d failed: invalid params %pK\n",
+		pr_err("%s:%d failed: invalid params %p\n",
 			__func__, __LINE__, vfe_dev);
 		if (vfe_dev)
-			pr_err("%s:%d failed %pK\n", __func__,
+			pr_err("%s:%d failed %p\n", __func__,
 				__LINE__, vfe_dev->vfe_base);
 		return -EINVAL;
 	}
@@ -767,16 +764,6 @@ static long msm_isp_ioctl_unlocked(struct v4l2_subdev *sd,
 			start_fetch_eng(vfe_dev, arg);
 		mutex_unlock(&vfe_dev->core_mutex);
 		break;
-	case VIDIOC_MSM_ISP_REG_UPDATE_CMD:
-		if (arg) {
-			enum msm_vfe_input_src frame_src =
-				*((enum msm_vfe_input_src *)arg);
-			vfe_dev->hw_info->vfe_ops.core_ops.
-				reg_update(vfe_dev, (1 << frame_src));
-			vfe_dev->axi_data.src_info[frame_src].last_updt_frm_id =
-			  vfe_dev->axi_data.src_info[frame_src].frame_id;
-		}
-		break;
 	case VIDIOC_MSM_ISP_SET_SRC_STATE:
 		mutex_lock(&vfe_dev->core_mutex);
 		rc = msm_isp_set_src_state(vfe_dev, arg);
@@ -841,10 +828,10 @@ static long msm_isp_ioctl_compat(struct v4l2_subdev *sd,
 	long rc = 0;
 
 	if (!vfe_dev || !vfe_dev->vfe_base) {
-		pr_err("%s:%d failed: invalid params %pK\n",
+		pr_err("%s:%d failed: invalid params %p\n",
 			__func__, __LINE__, vfe_dev);
 		if (vfe_dev)
-			pr_err("%s:%d failed %pK\n", __func__,
+			pr_err("%s:%d failed %p\n", __func__,
 				__LINE__, vfe_dev->vfe_base);
 		return -EINVAL;
 	}
@@ -919,13 +906,13 @@ static int msm_isp_send_hw_cmd(struct vfe_device *vfe_dev,
 	uint32_t *cfg_data, uint32_t cmd_len)
 {
 	if (!vfe_dev || !reg_cfg_cmd) {
-		pr_err("%s:%d failed: vfe_dev %pK reg_cfg_cmd %pK\n", __func__,
+		pr_err("%s:%d failed: vfe_dev %p reg_cfg_cmd %p\n", __func__,
 			__LINE__, vfe_dev, reg_cfg_cmd);
 		return -EINVAL;
 	}
 	if ((reg_cfg_cmd->cmd_type != VFE_CFG_MASK) &&
 		(!cfg_data || !cmd_len)) {
-		pr_err("%s:%d failed: cmd type %d cfg_data %pK cmd_len %d\n",
+		pr_err("%s:%d failed: cmd type %d cfg_data %p cmd_len %d\n",
 			__func__, __LINE__, reg_cfg_cmd->cmd_type, cfg_data,
 			cmd_len);
 		return -EINVAL;
@@ -940,8 +927,7 @@ static int msm_isp_send_hw_cmd(struct vfe_device *vfe_dev,
 			(UINT_MAX - reg_cfg_cmd->u.rw_info.len)) ||
 			((reg_cfg_cmd->u.rw_info.reg_offset +
 			reg_cfg_cmd->u.rw_info.len) >
-			resource_size(vfe_dev->vfe_mem)) ||
-			(reg_cfg_cmd->u.rw_info.reg_offset & 0x3)) {
+			resource_size(vfe_dev->vfe_mem))) {
 			pr_err("%s:%d reg_offset %d len %d res %d\n",
 				__func__, __LINE__,
 				reg_cfg_cmd->u.rw_info.reg_offset,
@@ -969,8 +955,7 @@ static int msm_isp_send_hw_cmd(struct vfe_device *vfe_dev,
 	case VFE_READ_DMI_16BIT:
 	case VFE_READ_DMI_32BIT:
 	case VFE_READ_DMI_64BIT: {
-		if (reg_cfg_cmd->cmd_type == VFE_WRITE_DMI_64BIT ||
-			reg_cfg_cmd->cmd_type == VFE_READ_DMI_64BIT) {
+		if (reg_cfg_cmd->cmd_type == VFE_WRITE_DMI_64BIT) {
 			if ((reg_cfg_cmd->u.dmi_info.hi_tbl_offset <=
 				reg_cfg_cmd->u.dmi_info.lo_tbl_offset) ||
 				(reg_cfg_cmd->u.dmi_info.hi_tbl_offset -
@@ -1040,8 +1025,7 @@ static int msm_isp_send_hw_cmd(struct vfe_device *vfe_dev,
 			reg_cfg_cmd->u.mask_info.reg_offset) ||
 			(resource_size(vfe_dev->vfe_mem) <
 			reg_cfg_cmd->u.mask_info.reg_offset +
-			sizeof(temp)) ||
-			(reg_cfg_cmd->u.mask_info.reg_offset & 0x3)) {
+			sizeof(temp))) {
 			pr_err("%s: VFE_CFG_MASK: Invalid length\n", __func__);
 			return -EINVAL;
 		}
@@ -1130,9 +1114,11 @@ static int msm_isp_send_hw_cmd(struct vfe_device *vfe_dev,
 	case VFE_HW_UPDATE_LOCK: {
 		uint32_t update_id =
 			vfe_dev->axi_data.src_info[VFE_PIX_0].last_updt_frm_id;
-		if (update_id) {
-			ISP_DBG("%s hw update lock failed cur id %u, last id %u\n",
+		if (vfe_dev->axi_data.src_info[VFE_PIX_0].frame_id != *cfg_data
+			|| update_id == *cfg_data) {
+			ISP_DBG("%s hw update lock failed acq %d, cur id %u, last id %u\n",
 				__func__,
+				*cfg_data,
 				vfe_dev->axi_data.src_info[VFE_PIX_0].frame_id,
 				update_id);
 			return -EINVAL;
@@ -1518,6 +1504,8 @@ void msm_isp_update_error_frame_count(struct vfe_device *vfe_dev)
 {
 	struct msm_vfe_error_info *error_info = &vfe_dev->error_info;
 	error_info->info_dump_frame_count++;
+	if (error_info->info_dump_frame_count == 0)
+		error_info->info_dump_frame_count++;
 }
 
 void msm_isp_process_error_info(struct vfe_device *vfe_dev)
@@ -1626,7 +1614,6 @@ static void msm_isp_process_overflow_irq(
 		*irq_status0 = 0;
 		*irq_status1 = 0;
 
-		memset(&error_event, 0, sizeof(error_event));
 		error_event.frame_id =
 			vfe_dev->axi_data.src_info[VFE_PIX_0].frame_id;
 		error_event.u.error_info.error_mask = 1 << ISP_WM_BUS_OVERFLOW;
@@ -1643,7 +1630,8 @@ void msm_isp_reset_burst_count_and_frame_drop(
 		stream_info->stream_type != BURST_STREAM) {
 		return;
 	}
-	if (stream_info->num_burst_capture != 0) {
+	if (stream_info->stream_type == BURST_STREAM &&
+		stream_info->num_burst_capture != 0) {
 		framedrop_period = msm_isp_get_framedrop_period(
 		   stream_info->frame_skip_pattern);
 		stream_info->burst_frame_count =
@@ -1757,8 +1745,6 @@ void msm_isp_do_tasklet(unsigned long data)
 			irq_status0, irq_status1, &ts);
 		irq_ops->process_reg_update(vfe_dev,
 			irq_status0, irq_status1, &ts);
-		irq_ops->process_epoch_irq(vfe_dev,
-			irq_status0, irq_status1, &ts);
 	}
 }
 
@@ -1781,17 +1767,17 @@ static int msm_vfe_iommu_fault_handler(struct iommu_domain *domain,
 	if (token) {
 		vfe_dev = (struct vfe_device *)token;
 		if (!vfe_dev->buf_mgr || !vfe_dev->buf_mgr->ops) {
-			pr_err("%s:%d] buf_mgr %pK\n", __func__,
+			pr_err("%s:%d] buf_mgr %p\n", __func__,
 				__LINE__, vfe_dev->buf_mgr);
 			goto end;
 		}
 		if (!vfe_dev->buf_mgr->pagefault_debug) {
-			pr_err("%s:%d] vfe_dev %pK id %d\n", __func__,
+			pr_err("%s:%d] vfe_dev %p id %d\n", __func__,
 				__LINE__, vfe_dev, vfe_dev->pdev->id);
 			vfe_dev->buf_mgr->ops->buf_mgr_debug(vfe_dev->buf_mgr);
 		}
 	} else {
-		ISP_DBG("%s:%d] no token received: %pK\n",
+		ISP_DBG("%s:%d] no token received: %p\n",
 			__func__, __LINE__, token);
 		goto end;
 	}
@@ -1815,7 +1801,7 @@ int msm_isp_open_node(struct v4l2_subdev *sd, struct v4l2_subdev_fh *fh)
 	}
 
 	if (vfe_dev->vfe_base) {
-		pr_err("%s:%d invalid params cnt %d base %pK\n", __func__,
+		pr_err("%s:%d invalid params cnt %d base %p\n", __func__,
 			__LINE__, vfe_dev->vfe_open_cnt, vfe_dev->vfe_base);
 		vfe_dev->vfe_base = NULL;
 	}

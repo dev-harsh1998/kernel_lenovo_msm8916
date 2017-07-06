@@ -384,8 +384,7 @@ static int msm_ois_close(struct v4l2_subdev *sd,
 	int rc = 0;
 	struct msm_ois_ctrl_t *o_ctrl =  v4l2_get_subdevdata(sd);
 	CDBG("Enter\n");
-	if (!o_ctrl || !o_ctrl->i2c_client.i2c_func_tbl) {
-		/* check to make sure that init happens before release */
+	if (!o_ctrl) {
 		pr_err("failed\n");
 		return -EINVAL;
 	}
@@ -410,19 +409,15 @@ static long msm_ois_subdev_ioctl(struct v4l2_subdev *sd,
 	struct msm_ois_ctrl_t *o_ctrl = v4l2_get_subdevdata(sd);
 	void __user *argp = (void __user *)arg;
 	CDBG("Enter\n");
-	CDBG("%s:%d o_ctrl %pK argp %pK\n", __func__, __LINE__, o_ctrl, argp);
+	CDBG("%s:%d o_ctrl %p argp %p\n", __func__, __LINE__, o_ctrl, argp);
 	switch (cmd) {
 	case VIDIOC_MSM_SENSOR_GET_SUBDEV_ID:
 		return msm_ois_get_subdev_id(o_ctrl, argp);
 	case VIDIOC_MSM_OIS_CFG:
 		return msm_ois_config(o_ctrl, argp);
 	case MSM_SD_SHUTDOWN:
-		if (!o_ctrl->i2c_client.i2c_func_tbl) {
-			pr_err("o_ctrl->i2c_client.i2c_func_tbl NULL\n");
-			return -EINVAL;
-		} else {
-			return msm_ois_close(sd, NULL);
-		}
+		msm_ois_close(sd, NULL);
+		return 0;
 	default:
 		return -ENOIOCTLCMD;
 	}
@@ -498,7 +493,7 @@ static int32_t msm_ois_i2c_probe(struct i2c_client *client,
 		goto probe_failure;
 	}
 
-	CDBG("client = 0x%pK\n",  client);
+	CDBG("client = 0x%p\n",  client);
 
 	rc = of_property_read_u32(client->dev.of_node, "cell-index",
 		&ois_ctrl_t->subdev_id);

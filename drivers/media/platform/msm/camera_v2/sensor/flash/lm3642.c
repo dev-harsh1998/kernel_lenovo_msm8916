@@ -116,7 +116,7 @@ int msm_flash_lm3642_led_init(struct msm_led_flash_ctrl_t *fctrl)
 		if (rc < 0)
 			pr_err("%s:%d failed\n", __func__, __LINE__);
 	}
-	return 0;
+	return rc;
 }
 
 int msm_flash_lm3642_led_release(struct msm_led_flash_ctrl_t *fctrl)

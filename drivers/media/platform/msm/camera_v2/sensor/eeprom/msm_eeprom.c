@@ -135,22 +135,15 @@ static int msm_eeprom_config(struct msm_eeprom_ctrl_t *e_ctrl,
 	struct msm_eeprom_cfg_data *cdata =
 		(struct msm_eeprom_cfg_data *)argp;
 	int rc = 0;
-	size_t length = 0;
 
 	CDBG("%s E\n", __func__);
 	switch (cdata->cfgtype) {
 	case CFG_EEPROM_GET_INFO:
 		CDBG("%s E CFG_EEPROM_GET_INFO\n", __func__);
 		cdata->is_supported = e_ctrl->is_supported;
-		length = strlen(e_ctrl->eboard_info->eeprom_name) + 1;
-		if (length > MAX_EEPROM_NAME) {
-			pr_err("%s:%d invalid eeprom name length %d\n",
-				__func__, __LINE__, (int)length);
-			rc = -EINVAL;
-			break;
-		}
 		memcpy(cdata->cfg.eeprom_name,
-			e_ctrl->eboard_info->eeprom_name, length);
+			e_ctrl->eboard_info->eeprom_name,
+			sizeof(cdata->cfg.eeprom_name));
 		break;
 	case CFG_EEPROM_GET_CAL_DATA:
 		CDBG("%s E CFG_EEPROM_GET_CAL_DATA\n", __func__);
@@ -194,7 +187,7 @@ static long msm_eeprom_subdev_ioctl(struct v4l2_subdev *sd,
 	struct msm_eeprom_ctrl_t *e_ctrl = v4l2_get_subdevdata(sd);
 	void __user *argp = (void __user *)arg;
 	CDBG("%s E\n", __func__);
-	CDBG("%s:%d a_ctrl %pK argp %pK\n", __func__, __LINE__, e_ctrl, argp);
+	CDBG("%s:%d a_ctrl %p argp %p\n", __func__, __LINE__, e_ctrl, argp);
 	switch (cmd) {
 	case VIDIOC_MSM_SENSOR_GET_SUBDEV_ID:
 		return msm_eeprom_get_subdev_id(e_ctrl, argp);
@@ -855,6 +848,12 @@ static int eeprom_config_read_cal_data32(struct msm_eeprom_ctrl_t *e_ctrl,
 	rc = copy_to_user(ptr_dest, e_ctrl->cal_data.mapdata,
 		cdata.cfg.read_data.num_bytes);
 
+	/* should only be called once.  free kernel resource */
+	if (!rc) {
+		kfree(e_ctrl->cal_data.mapdata);
+		kfree(e_ctrl->cal_data.map);
+		memset(&e_ctrl->cal_data, 0, sizeof(e_ctrl->cal_data));
+	}
 	return rc;
 }
 
@@ -863,22 +862,15 @@ static int msm_eeprom_config32(struct msm_eeprom_ctrl_t *e_ctrl,
 {
 	struct msm_eeprom_cfg_data *cdata = (struct msm_eeprom_cfg_data *)argp;
 	int rc = 0;
-	size_t length = 0;
 
 	CDBG("%s E\n", __func__);
 	switch (cdata->cfgtype) {
 	case CFG_EEPROM_GET_INFO:
 		CDBG("%s E CFG_EEPROM_GET_INFO\n", __func__);
 		cdata->is_supported = e_ctrl->is_supported;
-		length = strlen(e_ctrl->eboard_info->eeprom_name) + 1;
-		if (length > MAX_EEPROM_NAME) {
-			pr_err("%s:%d invalid eeprom name length %d\n",
-				__func__, __LINE__, (int)length);
-			rc = -EINVAL;
-			break;
-		}
 		memcpy(cdata->cfg.eeprom_name,
-			e_ctrl->eboard_info->eeprom_name, length);
+			e_ctrl->eboard_info->eeprom_name,
+			sizeof(cdata->cfg.eeprom_name));
 		break;
 	case CFG_EEPROM_GET_CAL_DATA:
 		CDBG("%s E CFG_EEPROM_GET_CAL_DATA\n", __func__);
@@ -904,7 +896,7 @@ static long msm_eeprom_subdev_ioctl32(struct v4l2_subdev *sd,
 	void __user *argp = (void __user *)arg;
 
 	CDBG("%s E\n", __func__);
-	CDBG("%s:%d a_ctrl %pK argp %pK\n", __func__, __LINE__, e_ctrl, argp);
+	CDBG("%s:%d a_ctrl %p argp %p\n", __func__, __LINE__, e_ctrl, argp);
 	switch (cmd) {
 	case VIDIOC_MSM_SENSOR_GET_SUBDEV_ID:
 		return msm_eeprom_get_subdev_id(e_ctrl, argp);
