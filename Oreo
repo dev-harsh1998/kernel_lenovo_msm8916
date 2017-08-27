@@ -27,13 +27,13 @@ Follow the following order
 -> net: diag: make udp_diag_destroy work for mapped addresses. - Done
 -> net: inet: diag: expose the socket mark to privileged processes. - Done
 -> UPSTREAM: ipv6: tcp: add rcu locking in tcp_v6_send_synack() - Done
--> tcp: fix more NULL deref after prequeue changes
--> Revert "Handle 'sk' being NULL in UID-based routing."
--> Revert "net: core: Support UID-based routing."
--> net: core: Add a UID field to struct sock.
--> net: core: add UID to flows, rules, and routes
--> net: inet: Support UID-based routing in IP protocols.
--> net: ipv4: Don't crash if passing a null sk to ip_rt_update_pmtu.
+-> tcp: fix more NULL deref after prequeue changes - Done
+-> Revert "Handle 'sk' being NULL in UID-based routing." - Done
+-> Revert "net: core: Support UID-based routing." - Done
+-> net: core: Add a UID field to struct sock. - Done
+-> net: core: add UID to flows, rules, and routes - Done
+-> net: inet: Support UID-based routing in IP protocols. - Done
+-> net: ipv4: Don't crash if passing a null sk to ip_rt_update_pmtu. - Done
 
 Most probably this commit set will work on all devices which fall under LA.BR.x.x.x CAF tag
 
