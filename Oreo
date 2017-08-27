@@ -2,22 +2,22 @@
 
 Follow the following order
 
--> android: binder: split flat_binder_object.
--> Add security hooks to binder and implement the hooks for SELinux.
--> android: binder: support multiple context managers
--> android: binder: deal with contexts in debugfs.
--> android: binder: support multiple /dev instances.
--> android: binder: refactor binder_transact()
--> android: binder: add extra size to allocator.
--> android: binder: support for scatter-gather.
--> android: binder: support for file-descriptor arrays.
--> android: binder: use copy_from_user_preempt_disabled
--> UPSTREAM: drivers: android: correct the size of struct binder_uintptr_t for BC_DEAD_BINDER_DONE
--> binder: use group leader instead of open thread
--> android: binder: Use wake up hint for synchronous transactions.
--> android: binder: Disable preemption while holding the global binder lock.
--> ANDROID: binder: add hwbinder,vndbinder to BINDER_DEVICES.
--> UPSTREAM: capabilities: ambient capabilities
+-> android: binder: split flat_binder_object. - Done
+-> [OPTIONAL] Add security hooks to binder and implement the hooks for SELinux.
+-> android: binder: support multiple context managers - Done
+-> android: binder: deal with contexts in debugfs. - Done
+-> android: binder: support multiple /dev instances. - Done
+-> android: binder: refactor binder_transact(). - Done
+-> android: binder: add extra size to allocator. - Done
+-> android: binder: support for scatter-gather. - Done
+-> android: binder: support for file-descriptor arrays. - Done
+-> android: binder: use copy_from_user_preempt_disabled. - Done
+-> UPSTREAM: drivers: android: correct the size of struct binder_uintptr_t for BC_DEAD_BINDER_DONE - Done
+-> binder: use group leader instead of open thread - Done
+-> android: binder: Use wake up hint for synchronous transactions. - Done
+-> android: binder: Disable preemption while holding the global binder lock. - Done
+-> ANDROID: binder: add hwbinder,vndbinder to BINDER_DEVICES. - Done
+-> UPSTREAM: capabilities: ambient capabilities - Done
 -> net: ipv6: Fix ping to link-local addresses.
 -> ipv6: fix endianness error in icmpv6_err
 -> net: diag: Add support to filter on device index
