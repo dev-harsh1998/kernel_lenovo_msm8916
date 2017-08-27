@@ -18,15 +18,15 @@ Follow the following order
 -> android: binder: Disable preemption while holding the global binder lock. - Done
 -> ANDROID: binder: add hwbinder,vndbinder to BINDER_DEVICES. - Done
 -> UPSTREAM: capabilities: ambient capabilities - Done
--> net: ipv6: Fix ping to link-local addresses.
--> ipv6: fix endianness error in icmpv6_err
--> net: diag: Add support to filter on device index
--> net: diag: slightly refactor the inet_diag_bc_audit error checks.
--> net: diag: allow socket bytecode filters to match socket marks
--> net: diag: support SOCK_DESTROY for UDP sockets
--> net: diag: make udp_diag_destroy work for mapped addresses.
--> net: inet: diag: expose the socket mark to privileged processes.
--> UPSTREAM: ipv6: tcp: add rcu locking in tcp_v6_send_synack()
+-> net: ipv6: Fix ping to link-local addresses. - Done
+-> ipv6: fix endianness error in icmpv6_err - Done
+-> net: diag: Add support to filter on device index - Done
+-> net: diag: slightly refactor the inet_diag_bc_audit error checks. - Done
+-> net: diag: allow socket bytecode filters to match socket marks - Done
+-> net: diag: support SOCK_DESTROY for UDP sockets - Done
+-> net: diag: make udp_diag_destroy work for mapped addresses. - Done
+-> net: inet: diag: expose the socket mark to privileged processes. - Done
+-> UPSTREAM: ipv6: tcp: add rcu locking in tcp_v6_send_synack() - Done
 -> tcp: fix more NULL deref after prequeue changes
 -> Revert "Handle 'sk' being NULL in UID-based routing."
 -> Revert "net: core: Support UID-based routing."
