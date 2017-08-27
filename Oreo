@@ -41,7 +41,7 @@ Needed changes to be done in Defconfig (Saved kernel config) found under kernel-
 
 Add/Enable Following configs:
 
--> Important
+-> Important - Done
 CONFIG_PROC_DEVICETREE=y
 CONFIG_ANDROID_BINDER_DEVICES="binder,hwbinder"
 CONFIG_QUOTA=y
