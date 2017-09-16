@@ -709,6 +709,7 @@ end:
 	return 0;
 }
 
+#ifndef CONFIG_MACH_WT86518
 static int mdss_dsi_panel_low_power_config(struct mdss_panel_data *pdata,
 	int enable)
 {
@@ -736,6 +737,8 @@ static int mdss_dsi_panel_low_power_config(struct mdss_panel_data *pdata,
 	pr_debug("%s:-\n", __func__);
 	return 0;
 }
+// We dont need this on a6000 (SOT LAGANI HAI!)
+#endif
 
 static void mdss_dsi_parse_lane_swap(struct device_node *np, char *dlane_swap)
 {

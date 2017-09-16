@@ -1369,6 +1369,12 @@ static const struct snd_kcontrol_new msm_snd_controls[] = {
 			mi2s_tx_sample_rate_get, mi2s_tx_sample_rate_put),
 	SOC_ENUM_EXT("MI2S_RX SampleRate", msm_snd_enum[3],
 			mi2s_rx_sample_rate_get, mi2s_rx_sample_rate_put),
+
+#ifdef CONFIG_MACH_WT86518
+	SOC_ENUM_EXT("Lineout_1 amp", msm_snd_enum[6],
+			lineout_status_get, lineout_status_put),
+#endif
+
 };
 
 static int msm8x16_mclk_event(struct snd_soc_dapm_widget *w,

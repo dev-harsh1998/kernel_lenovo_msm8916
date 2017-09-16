@@ -4145,6 +4145,14 @@ static int msm8x16_wcd_hph_pa_event(struct snd_soc_dapm_widget *w,
 			snd_soc_update_bits(codec,
 				MSM8X16_WCD_A_CDC_RX2_B6_CTL, 0x01, 0x00);
 		}
+
+#ifdef CONFIG_MACH_WT86518
+		usleep_range(10000, 10100);
+		if(!state)
+			gpio_direction_output(EXT_SPK_AMP_HEADSET_GPIO, false);
+		else
+			schedule_delayed_work(&analog_switch_enable, msecs_to_jiffies(500));
+#endif
 		break;
 
 	case SND_SOC_DAPM_PRE_PMD:
@@ -5570,8 +5578,9 @@ static int msm8x16_wcd_codec_probe(struct snd_soc_codec *codec)
 		dev_err(codec->dev, "%s: Failed to register h2w\n", __func__);
 		return -ENOMEM;
 	}
-#endif
+#else
 	msm8x16_wcd_priv->mclk_enabled = false;
+#endif
 	msm8x16_wcd_priv->clock_active = false;
 	msm8x16_wcd_priv->config_mode_active = false;
 
@@ -5593,6 +5602,11 @@ static int msm8x16_wcd_codec_probe(struct snd_soc_codec *codec)
 		registered_codec = NULL;
 		return -ENOMEM;
 	}
+
+#ifdef CONFIG_MACH_WT86518
+	INIT_DELAYED_WORK(&analog_switch_enable, msm8x16_analog_switch_delayed_enable);
+#endif
+
 	return 0;
 }
 
