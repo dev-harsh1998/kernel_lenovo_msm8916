@@ -172,8 +172,8 @@ typedef struct sg_fd {		/* holds the state of a file descriptor */
 
 typedef struct sg_device { /* holds the state of each scsi generic device */
 	struct scsi_device *device;
-	wait_queue_head_t open_wait;    /* queue open() when O_EXCL present */
-	struct mutex open_rel_lock;     /* held when in open() or release() */
+	struct mutex open_rel_lock;
+	wait_queue_head_t open_wait;	/* queue open() when O_EXCL in use */
 	int sg_tablesize;	/* adapter's max scatter-gather table size */
 	u32 index;		/* device index number */
 	struct list_head sfds;
@@ -2628,9 +2628,9 @@ static void sg_proc_debug_helper(struct seq_file *s, Sg_device * sdp)
 			seq_puts(s, cp);
 			blen = srp->data.bufflen;
 			usg = srp->data.k_use_sg;
-			seq_puts(s, srp->done ?
-				 ((1 == srp->done) ?  "rcv:" : "fin:")
-				  : "act:");
+			seq_printf(s, srp->done ?
+				   ((1 == srp->done) ?  "rcv:" : "fin:")
+				   : "act:");
 			seq_printf(s, " id=%d blen=%d",
 				   srp->header.pack_id, blen);
 			if (srp->done)
