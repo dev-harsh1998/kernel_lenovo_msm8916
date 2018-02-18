@@ -742,13 +742,6 @@ AKECS_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 	return 0;
 }
 
-static const struct file_operations AKECS_fops = {
-	.owner = THIS_MODULE,
-	.open = AKECS_Open,
-	.release = AKECS_Release,
-	.unlocked_ioctl = AKECS_ioctl,
-};
-
 /***** akm sysfs functions ******************************************/
 static int create_device_attributes(
 	struct device *dev,
