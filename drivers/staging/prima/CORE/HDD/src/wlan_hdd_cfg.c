@@ -6406,8 +6406,8 @@ VOS_STATUS hdd_set_sme_config( hdd_context_t *pHddCtx )
    }
    else
    {
-       smeConfig->csrConfig.channelBondingMode24GHz   = pConfig->nChannelBondingMode24GHz;
-       smeConfig->csrConfig.channelBondingMode5GHz   = pConfig->nChannelBondingMode5GHz;
+       smeConfig->csrConfig.channelBondingMode24GHz   = WNI_CFG_CHANNEL_BONDING_MODE_ENABLE;
+       smeConfig->csrConfig.channelBondingMode5GHz   = WNI_CFG_CHANNEL_BONDING_MODE_ENABLE;
    }
    smeConfig->csrConfig.TxRate                   = pConfig->TxRate;
    smeConfig->csrConfig.nScanResultAgeCount      = pConfig->ScanResultAgeCount;
