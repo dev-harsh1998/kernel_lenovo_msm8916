@@ -27,6 +27,7 @@
 /*                                                                      */
 /************************************************************************/
 
+#pragma GCC diagnostic ignored "-Wint-in-bool-context"
 #include <linux/slab.h>
 #include <linux/vmalloc.h>
 

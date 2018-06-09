@@ -16,6 +16,7 @@
  *
  */
 
+#pragma GCC diagnostic ignored "-Wformat-truncation="
 #include <linux/i2c.h>
 #include <linux/input.h>
 #include <linux/input/mt.h>

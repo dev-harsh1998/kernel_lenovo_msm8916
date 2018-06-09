@@ -22,6 +22,7 @@
  * - completely modularize elevator setup and teardown
  *
  */
+#pragma GCC diagnostic ignored "-Wformat-truncation="
 #include <linux/kernel.h>
 #include <linux/fs.h>
 #include <linux/blkdev.h>
