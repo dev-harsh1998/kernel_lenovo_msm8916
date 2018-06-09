@@ -16,6 +16,7 @@
  *
  */
 
+#pragma GCC diagnostic ignored "-Wformat-truncation="
 #include <linux/clk.h>
 #include <linux/err.h>
 #include <linux/io.h>

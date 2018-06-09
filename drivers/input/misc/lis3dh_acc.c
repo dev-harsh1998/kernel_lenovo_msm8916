@@ -52,6 +52,7 @@
 
  ******************************************************************************/
 
+#pragma GCC diagnostic ignored "-Wformat-truncation="
 #include	<linux/err.h>
 #include	<linux/errno.h>
 #include	<linux/delay.h>
