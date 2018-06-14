@@ -1,11 +1,11 @@
 /*
  * Hash: Hash algorithms under the crypto API
- * 
+ *
  * Copyright (c) 2008 Herbert Xu <herbert@gondor.apana.org.au>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the Free
- * Software Foundation; either version 2 of the License, or (at your option) 
+ * Software Foundation; either version 2 of the License, or (at your option)
  * any later version.
  *
  */
@@ -57,6 +57,11 @@ struct shash_desc {
 
 	void *__ctx[] CRYPTO_MINALIGN_ATTR;
 };
+
+#define SHASH_DESC_ON_STACK(shash, ctx)				  \
+	char __##shash##_desc[sizeof(struct shash_desc) +	  \
+		crypto_shash_descsize(ctx)] CRYPTO_MINALIGN_ATTR; \
+	struct shash_desc *shash = (struct shash_desc *)__##shash##_desc
 
 struct shash_alg {
 	int (*init)(struct shash_desc *desc);
