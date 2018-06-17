@@ -12,6 +12,7 @@
  *
  */
 
+#pragma GCC diagnostic ignored "-Wformat-truncation="
 #include <linux/delay.h>
 #include <linux/i2c.h>
 #include <linux/init.h>

@@ -21,7 +21,7 @@
  *
  */
 
-
+#pragma GCC diagnostic ignored "-Wformat-truncation="
 #include <linux/device.h>
 #include <linux/hid.h>
 #include <linux/module.h>
