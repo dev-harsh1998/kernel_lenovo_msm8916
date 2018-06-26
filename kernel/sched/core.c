@@ -7735,11 +7735,9 @@ static int init_rootdomain(struct root_domain *rd)
 		goto free_online;
 
 	if (cpupri_init(&rd->cpupri) != 0)
-		goto free_cpudl;
+		goto free_rto_mask;
 	return 0;
 
-free_cpudl:
-	cpudl_cleanup(&rd->cpudl);
 free_rto_mask:
 	free_cpumask_var(rd->rto_mask);
 free_online:
