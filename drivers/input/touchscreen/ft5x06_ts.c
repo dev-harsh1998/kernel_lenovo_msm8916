@@ -2149,7 +2149,7 @@ static int ft5x06_ts_probe(struct i2c_client *client,
 
 	data = devm_kzalloc(&client->dev,
 			sizeof(struct ft5x06_ts_data), GFP_KERNEL);
-	if (!data) {
+	if (!data->tch_data) {
 		dev_err(&client->dev, "Not enough memory\n");
 		return -ENOMEM;
 	}
