@@ -70,6 +70,7 @@
 
 #define WAKE_GESTURES_ENABLED	1
 
+#define BASE_STRENGTH		100
 #define LOGTAG			"WG"
 
 #if (WAKE_GESTURES_ENABLED)
@@ -102,6 +103,7 @@ static struct input_dev * wake_dev;
 static DEFINE_MUTEX(pwrkeyworklock);
 static struct work_struct s2w_input_work;
 static struct work_struct dt2w_input_work;
+static int vib_strength = BASE_STRENGTH;
 
 static bool is_suspended(void)
 {
@@ -135,7 +137,7 @@ static void wake_presspwr(struct work_struct * wake_presspwr_work) {
 	input_event(wake_dev, EV_SYN, 0, 0);
 	msleep(WG_PWRKEY_DUR);
 	mutex_unlock(&pwrkeyworklock);
-
+	set_vibrate(vib_strength);
 	return;
 }
 static DECLARE_WORK(wake_presspwr_work, wake_presspwr);
