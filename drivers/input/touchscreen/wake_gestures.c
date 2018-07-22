@@ -542,7 +542,6 @@ static void unregister_wg(void)
 		return;
 
 	registered = false;
-	wake_lock_destroy(&dt2w_wakelock);
 	input_unregister_handler(&wg_input_handler);
 
 	cancel_work_sync(&dt2w_input_work);
@@ -553,8 +552,7 @@ static int register_wg(void)
 {
 	int rc = 0;
 
-	if (!s2w_switch && !s2s_switch && !dt2w_switch && !gestures_switch
-		&& !camera_switch) {
+	if (!s2w_switch && !s2s_switch && !dt2w_switch && !gestures_switch) {
 		unregister_wg();
 		return rc;
 	}
@@ -564,19 +562,14 @@ static int register_wg(void)
 
 	INIT_WORK(&s2w_input_work, s2w_input_callback);
 	INIT_WORK(&dt2w_input_work, dt2w_input_callback);
-	wake_lock_init(&dt2w_wakelock, WAKE_LOCK_SUSPEND, "dt2w_wakelock");
 
 	rc = input_register_handler(&wg_input_handler);
 	if (rc) {
 		pr_err("%s: Failed to register wg_input_handler\n", __func__);
-		goto err;
 	}
 
 	registered = true;
 
-	return rc;
-err:
-	wake_lock_destroy(&dt2w_wakelock);
 	return rc;
 }
 
