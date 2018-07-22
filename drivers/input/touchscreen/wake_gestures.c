@@ -602,7 +602,7 @@ static ssize_t sweep2wake_dump(struct device *dev,
 	return count;
 }
 
-static DEVICE_ATTR(sweep2wake, (S_IWUSR|S_IRUGO),
+static DEVICE_ATTR(sweep2wake, (0644),
 	sweep2wake_show, sweep2wake_dump);
 
 static ssize_t sweep2sleep_show(struct device *dev,
@@ -624,7 +624,7 @@ static ssize_t sweep2sleep_dump(struct device *dev,
 	return count;
 }
 
-static DEVICE_ATTR(sweep2sleep, (S_IWUSR|S_IRUGO),
+static DEVICE_ATTR(sweep2sleep, (0644),
 	sweep2sleep_show, sweep2sleep_dump);
 
 static ssize_t doubletap2wake_show(struct device *dev,
@@ -657,7 +657,7 @@ static ssize_t doubletap2wake_dump(struct device *dev,
 	return count;
 }
 
-static DEVICE_ATTR(doubletap2wake, (S_IWUSR|S_IRUGO),
+static DEVICE_ATTR(doubletap2wake, (0644),
 	doubletap2wake_show, doubletap2wake_dump);
 
 #if (WAKE_GESTURES_ENABLED)
@@ -679,7 +679,7 @@ static ssize_t wake_gestures_dump(struct device *dev,
 	return count;
 }
 
-static DEVICE_ATTR(wake_gestures, (S_IWUSR|S_IRUGO),
+static DEVICE_ATTR(wake_gestures, (0644),
 	wake_gestures_show, wake_gestures_dump);
 #endif
 
