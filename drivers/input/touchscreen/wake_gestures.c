@@ -57,7 +57,7 @@
 #define SWEEP_X_FINAL           180
 #define SWEEP_Y_NEXT            150
 #define DT2W_FEATHER		150
-#define DT2W_TIME 		500
+#define DT2W_TIME 		579
 
 /* Wake Gestures */
 #define SWEEP_TIMEOUT		300
@@ -70,7 +70,7 @@
 
 #define WAKE_GESTURES_ENABLED	1
 
-#define BASE_STRENGTH		100
+#define BASE_STRENGTH		62
 #define LOGTAG			"WG"
 
 #if (WAKE_GESTURES_ENABLED)
