@@ -890,7 +890,7 @@ static uint32_t register_client_adhoc(struct msm_bus_scale_pdata *pdata)
 					handle);
 	MSM_BUS_DBG("%s:Client handle %d %s", __func__, handle,
 						client->pdata->name);
-	rt_mutex_unlock(&msm_bus_adhoc_lock);
+	mutex_unlock(&msm_bus_adhoc_lock);
 	return handle;
 exit_invalid_data:
 	kfree(client->src_devs);
