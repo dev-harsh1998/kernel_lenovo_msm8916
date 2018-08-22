@@ -18,7 +18,6 @@
 /* #define DEBUG */
 /* #define VERBOSE_DEBUG */
 
-#pragma GCC diagnostic ignored "-Wformat-overflow="
 #include <linux/blkdev.h>
 #include <linux/pagemap.h>
 #include <linux/export.h>
