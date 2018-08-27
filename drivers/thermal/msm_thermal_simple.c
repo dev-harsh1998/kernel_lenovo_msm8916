@@ -26,7 +26,6 @@
 #include <linux/slab.h>
 
 #define DEFAULT_SAMPLING_MS 3000
-#define CPU_MASK(cpu) (1U << (cpu))
 #define UNTHROTTLE_ZONE (-1)
 
 /* Sysfs attr group must be manually updated in order to change this */
@@ -234,7 +233,7 @@ static uint32_t get_throttle_freq(struct thermal_policy *t,
 
 	/* redo the logic again for msm8916 (non bLE) dev-harsh1998*/
 	spin_lock(&t->lock);
-	freq = zone->freq[CPU_MASK(cpu) & 1];
+	freq = zone->freq;
 	spin_unlock(&t->lock);
 
 	return freq;
@@ -247,7 +246,7 @@ static void set_throttle_freq(struct thermal_policy *t,
 
 	/* Adapt for msm8916 dev-harsh1998 */
 	spin_lock(&t->lock);
-	zone->freq[CPU_MASK(cpu) & 1] = freq;
+	zone->freq = freq;
 	spin_unlock(&t->lock);
 }
 
