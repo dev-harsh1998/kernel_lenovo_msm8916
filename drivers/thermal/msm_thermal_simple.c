@@ -284,19 +284,19 @@ static ssize_t thermal_zone_write(struct device *dev,
 		struct device_attribute *attr, const char *buf, size_t size)
 {
 	struct thermal_policy *t = t_policy_g;
-	uint32_t freq[2], idx;
+	uint32_t freq, idx;
 	int64_t trip_degC, reset_degC;
 	int ret;
 
-	ret = sscanf(buf, "%u %u %lld %lld", &freq[0], &freq[1],
-						&trip_degC, &reset_degC);
-	if (ret != 4)
-		return -EINVAL;
+	ret = sscanf(buf, "%u %lld %lld", &freq, &trip_degC, &reset_degC);
+	
+	if (ret != 3)
+		return -EINVAL;	
 
 	idx = get_thermal_zone_number(attr->attr.name);
 
 	spin_lock(&t->lock);
-	t->zone[idx].freq = freq;
+	t->zone[idx].freq =  get_valid_cpufreq(0, freq);
 	t->zone[idx].trip_degC = trip_degC;
 	t->zone[idx].reset_degC = reset_degC;
 	spin_unlock(&t->lock);
