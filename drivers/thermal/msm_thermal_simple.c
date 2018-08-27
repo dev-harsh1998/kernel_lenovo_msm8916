@@ -26,6 +26,7 @@
 #include <linux/slab.h>
 
 #define DEFAULT_SAMPLING_MS 3000
+#define CPU_MASK(cpu) (1U << (cpu))
 #define UNTHROTTLE_ZONE (-1)
 
 /* Sysfs attr group must be manually updated in order to change this */
@@ -206,12 +207,8 @@ static void update_online_cpu_policy(void)
 static uint32_t get_throttle_freq(const struct thermal_zone *zone,
 		uint32_t cpu)
 {
-	/*
-	 * The throttle frequency for a LITTLE CPU is stored at index 0 of
-	 * the throttle freq array. The frequency for a big CPU is stored at
-	 * index 1.
-	 */
-	return zone->freq[CPU_MASK(cpu) & LITTLE_CPU_MASK ? 0 : 1];
+	/* Redo for non bLE (msm8916) @dev-harsh1998 */
+	return zone->freq[CPU_MASK(cpu) & 1];
 }
 
 static uint32_t get_thermal_zone_number(const char *filename)
