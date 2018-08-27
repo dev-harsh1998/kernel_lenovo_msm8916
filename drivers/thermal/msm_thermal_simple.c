@@ -223,13 +223,9 @@ static uint32_t get_throttle_freq(struct thermal_policy *t,
 	struct thermal_zone *zone = &t->zone[idx];
 	uint32_t freq;
 
-	/*
-	 * The throttle frequency for a LITTLE CPU is stored at index 0 of
-	 * the throttle freq array. The frequency for a big CPU is stored at
-	 * index 1.
-	 */
+	/* redo the logic again for msm8916 (non bLE) dev-harsh1998*/
 	spin_lock(&t->lock);
-	freq = zone->freq[CPU_MASK(cpu) & LITTLE_CPU_MASK ? 0 : 1];
+	freq = zone->freq[CPU_MASK(cpu) & 1];
 	spin_unlock(&t->lock);
 
 	return freq;
@@ -240,13 +236,9 @@ static void set_throttle_freq(struct thermal_policy *t,
 {
 	struct thermal_zone *zone = &t->zone[idx];
 
-	/*
-	 * The throttle frequency for a LITTLE CPU is stored at index 0 of
-	 * the throttle freq array. The frequency for a big CPU is stored at
-	 * index 1.
-	 */
+	/* Adapt for msm8916 dev-harsh1998 */
 	spin_lock(&t->lock);
-	zone->freq[CPU_MASK(cpu) & LITTLE_CPU_MASK ? 0 : 1] = freq;
+	zone->freq[CPU_MASK(cpu) & 1] = freq;
 	spin_unlock(&t->lock);
 }
 
