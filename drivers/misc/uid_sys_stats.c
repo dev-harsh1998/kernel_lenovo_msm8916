@@ -353,14 +353,9 @@ static ssize_t uid_procstat_write(struct file *file,
 	mutex_lock(&uid_lock);
 
 	uid_entry = find_or_register_uid(uid);
-	if (!uid_entry) {
+	if (!uid_entry || uid_entry->state == state) {
 		mutex_unlock(&uid_lock);
 		return -EINVAL;
-	}
-
-	if (uid_entry->state == state) {
-		mutex_unlock(&uid_lock);
-		return 0;
 	}
 
 	memset(&uid_entry->io[UID_STATE_TOTAL_CURR], 0,
