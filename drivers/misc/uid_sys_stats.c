@@ -50,8 +50,7 @@ struct io_stats {
 
 #define UID_STATE_TOTAL_CURR	2
 #define UID_STATE_TOTAL_LAST	3
-#define UID_STATE_DEAD_TASKS	4
-#define UID_STATE_SIZE		5
+#define UID_STATE_SIZE		4
 
 struct uid_entry {
 	uid_t uid;
@@ -228,44 +227,35 @@ static u64 compute_write_bytes(struct task_struct *task)
 	return task->ioac.write_bytes - task->ioac.cancelled_write_bytes;
 }
 
-static void add_uid_io_stats(struct uid_entry *uid_entry,
-			struct task_struct *task, int slot)
+static void add_uid_io_curr_stats(struct uid_entry *uid_entry,
+			struct task_struct *task)
 {
-	struct io_stats *io_slot = &uid_entry->io[slot];
+	struct io_stats *io_curr = &uid_entry->io[UID_STATE_TOTAL_CURR];
 
-	io_slot->read_bytes += task->ioac.read_bytes;
-	io_slot->write_bytes += compute_write_bytes(task);
-	io_slot->rchar += task->ioac.rchar;
-	io_slot->wchar += task->ioac.wchar;
-	io_slot->fsync += task->ioac.syscfs;
+	io_curr->read_bytes += task->ioac.read_bytes;
+	io_curr->write_bytes += compute_write_bytes(task);
+	io_curr->rchar += task->ioac.rchar;
+	io_curr->wchar += task->ioac.wchar;
+	io_curr->fsync += task->ioac.syscfs;
 }
 
-static void compute_uid_io_bucket_stats(struct io_stats *io_bucket,
-					struct io_stats *io_curr,
-					struct io_stats *io_last,
-					struct io_stats *io_dead)
+static void clean_uid_io_last_stats(struct uid_entry *uid_entry,
+			struct task_struct *task)
 {
-	io_bucket->read_bytes += io_curr->read_bytes + io_dead->read_bytes -
-		io_last->read_bytes;
-	io_bucket->write_bytes += io_curr->write_bytes + io_dead->write_bytes -
-		io_last->write_bytes;
-	io_bucket->rchar += io_curr->rchar + io_dead->rchar - io_last->rchar;
-	io_bucket->wchar += io_curr->wchar + io_dead->wchar - io_last->wchar;
-	io_bucket->fsync += io_curr->fsync + io_dead->fsync - io_last->fsync;
+	struct io_stats *io_last = &uid_entry->io[UID_STATE_TOTAL_LAST];
 
-	io_last->read_bytes = io_curr->read_bytes;
-	io_last->write_bytes = io_curr->write_bytes;
-	io_last->rchar = io_curr->rchar;
-	io_last->wchar = io_curr->wchar;
-	io_last->fsync = io_curr->fsync;
-
-	memset(io_dead, 0, sizeof(struct io_stats));
+	io_last->read_bytes -= task->ioac.read_bytes;
+	io_last->write_bytes -= compute_write_bytes(task);
+	io_last->rchar -= task->ioac.rchar;
+	io_last->wchar -= task->ioac.wchar;
+	io_last->fsync -= task->ioac.syscfs;
 }
 
 static void update_io_stats_all_locked(void)
 {
 	struct uid_entry *uid_entry;
 	struct task_struct *task, *temp;
+	struct io_stats *io_bucket, *io_curr, *io_last;
 	struct user_namespace *user_ns = current_user_ns();
 	unsigned long bkt;
 	uid_t uid;
@@ -280,38 +270,70 @@ static void update_io_stats_all_locked(void)
 		uid_entry = find_or_register_uid(uid);
 		if (!uid_entry)
 			continue;
-		add_uid_io_stats(uid_entry, task, UID_STATE_TOTAL_CURR);
+		add_uid_io_curr_stats(uid_entry, task);
 	} while_each_thread(temp, task);
 	rcu_read_unlock();
 
 	hash_for_each(hash_table, bkt, uid_entry, hash) {
-		compute_uid_io_bucket_stats(&uid_entry->io[uid_entry->state],
-					&uid_entry->io[UID_STATE_TOTAL_CURR],
-					&uid_entry->io[UID_STATE_TOTAL_LAST],
-					&uid_entry->io[UID_STATE_DEAD_TASKS]);
+		io_bucket = &uid_entry->io[uid_entry->state];
+		io_curr = &uid_entry->io[UID_STATE_TOTAL_CURR];
+		io_last = &uid_entry->io[UID_STATE_TOTAL_LAST];
+
+		io_bucket->read_bytes +=
+			io_curr->read_bytes - io_last->read_bytes;
+		io_bucket->write_bytes +=
+			io_curr->write_bytes - io_last->write_bytes;
+		io_bucket->rchar += io_curr->rchar - io_last->rchar;
+		io_bucket->wchar += io_curr->wchar - io_last->wchar;
+		io_bucket->fsync += io_curr->fsync - io_last->fsync;
+
+		io_last->read_bytes = io_curr->read_bytes;
+		io_last->write_bytes = io_curr->write_bytes;
+		io_last->rchar = io_curr->rchar;
+		io_last->wchar = io_curr->wchar;
+		io_last->fsync = io_curr->fsync;
 	}
 }
 
-static void update_io_stats_uid_locked(struct uid_entry *uid_entry)
+static void update_io_stats_uid_locked(uid_t target_uid)
 {
+	struct uid_entry *uid_entry;
 	struct task_struct *task, *temp;
+	struct io_stats *io_bucket, *io_curr, *io_last;
 	struct user_namespace *user_ns = current_user_ns();
+
+	uid_entry = find_or_register_uid(target_uid);
+	if (!uid_entry)
+		return;
 
 	memset(&uid_entry->io[UID_STATE_TOTAL_CURR], 0,
 		sizeof(struct io_stats));
 
 	rcu_read_lock();
 	do_each_thread(temp, task) {
-		if (from_kuid_munged(user_ns, task_uid(task)) != uid_entry->uid)
+		if (from_kuid_munged(user_ns, task_uid(task)) != target_uid)
 			continue;
-		add_uid_io_stats(uid_entry, task, UID_STATE_TOTAL_CURR);
+		add_uid_io_curr_stats(uid_entry, task);
 	} while_each_thread(temp, task);
 	rcu_read_unlock();
 
-	compute_uid_io_bucket_stats(&uid_entry->io[uid_entry->state],
-				&uid_entry->io[UID_STATE_TOTAL_CURR],
-				&uid_entry->io[UID_STATE_TOTAL_LAST],
-				&uid_entry->io[UID_STATE_DEAD_TASKS]);
+	io_bucket = &uid_entry->io[uid_entry->state];
+	io_curr = &uid_entry->io[UID_STATE_TOTAL_CURR];
+	io_last = &uid_entry->io[UID_STATE_TOTAL_LAST];
+
+	io_bucket->read_bytes +=
+		io_curr->read_bytes - io_last->read_bytes;
+	io_bucket->write_bytes +=
+		io_curr->write_bytes - io_last->write_bytes;
+	io_bucket->rchar += io_curr->rchar - io_last->rchar;
+	io_bucket->wchar += io_curr->wchar - io_last->wchar;
+	io_bucket->fsync += io_curr->fsync - io_last->fsync;
+
+	io_last->read_bytes = io_curr->read_bytes;
+	io_last->write_bytes = io_curr->write_bytes;
+	io_last->rchar = io_curr->rchar;
+	io_last->wchar = io_curr->wchar;
+	io_last->fsync = io_curr->fsync;
 }
 
 static int uid_io_show(struct seq_file *m, void *v)
@@ -396,7 +418,7 @@ static ssize_t uid_procstat_write(struct file *file,
 		return count;
 	}
 
-	update_io_stats_uid_locked(uid_entry);
+	update_io_stats_uid_locked(uid);
 
 	uid_entry->state = state;
 
@@ -436,7 +458,8 @@ static int process_notifier(struct notifier_block *self,
 	uid_entry->power += task->cpu_power;
 	task->cpu_power = ULLONG_MAX;
 
-	add_uid_io_stats(uid_entry, task, UID_STATE_DEAD_TASKS);
+	update_io_stats_uid_locked(uid);
+	clean_uid_io_last_stats(uid_entry, task);
 
 exit:
 	rt_mutex_unlock(&uid_lock);
