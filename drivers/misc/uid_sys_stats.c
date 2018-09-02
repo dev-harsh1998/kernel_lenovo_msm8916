@@ -98,11 +98,9 @@ static int uid_cputime_show(struct seq_file *m, void *v)
 {
 	struct uid_entry *uid_entry;
 	struct task_struct *task, *temp;
-	struct user_namespace *user_ns = current_user_ns();
 	cputime_t utime;
 	cputime_t stime;
 	unsigned long bkt;
-	uid_t uid;
 
 	rt_mutex_lock(&uid_lock);
 
@@ -114,13 +112,14 @@ static int uid_cputime_show(struct seq_file *m, void *v)
 
 	read_lock(&tasklist_lock);
 	do_each_thread(temp, task) {
-		uid = from_kuid_munged(user_ns, task_uid(task));
-		uid_entry = find_or_register_uid(uid);
+		uid_entry = find_or_register_uid(from_kuid_munged(
+			current_user_ns(), task_uid(task)));
 		if (!uid_entry) {
 			read_unlock(&tasklist_lock);
 			rt_mutex_unlock(&uid_lock);
 			pr_err("%s: failed to find the uid_entry for uid %d\n",
-				__func__, uid);
+				__func__, from_kuid_munged(current_user_ns(),
+				task_uid(task)));
 			return -ENOMEM;
 		}
 		/* if this task is exiting, we have already accounted for the
