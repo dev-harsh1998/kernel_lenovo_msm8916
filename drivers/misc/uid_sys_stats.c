@@ -1,4 +1,4 @@
-/* drivers/misc/uid_sys_stats.c
+/* drivers/misc/uid_cputime.c
  *
  * Copyright (C) 2014 - 2015 Google, Inc.
  *
