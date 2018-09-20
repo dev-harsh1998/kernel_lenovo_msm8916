@@ -16,6 +16,7 @@
  *
  */
 
+#pragma GCC diagnostic ignored "-Wformat-truncation="
 #include <linux/i2c.h>
 #include <linux/input.h>
 #include <linux/input/mt.h>
@@ -40,6 +41,10 @@
 #include <linux/earlysuspend.h>
 /* Early-suspend level */
 #define FT_SUSPEND_LEVEL 1
+#endif
+
+#ifdef CONFIG_WAKE_GESTURES
+#include <linux/wake_gestures.h>
 #endif
 
 #define FT_DRIVER_VERSION	0x02
@@ -268,6 +273,14 @@ struct ft5x06_ts_data {
 	struct pinctrl_state *pinctrl_state_suspend;
 	struct pinctrl_state *pinctrl_state_release;
 };
+
+#ifdef CONFIG_WAKE_GESTURES
+struct ft5x06_ts_data *ft5x06_ts = NULL;
+
+bool scr_suspended_ft(void) {
+	return ft5x06_ts->suspended;
+}
+#endif
 
 static int ft5x06_ts_start(struct device *dev);
 static int ft5x06_ts_stop(struct device *dev);
@@ -763,6 +776,11 @@ static irqreturn_t ft5x06_ts_interrupt(int irq, void *dev_id)
 		if (!num_touches && !status && !id)
 			break;
 
+#ifdef CONFIG_WAKE_GESTURES
+		if (data->suspended)
+			x += 5000;
+#endif
+
 		input_mt_slot(ip_dev, id);
 		if (status == FT_TOUCH_DOWN || status == FT_TOUCH_CONTACT) {
 			input_mt_report_slot_state(ip_dev, MT_TOOL_FINGER, 1);
@@ -1182,6 +1200,19 @@ static int ft5x06_ts_suspend(struct device *dev)
 		return 0;
 	}
 
+#ifdef CONFIG_WAKE_GESTURES
+	if (device_may_wakeup(dev) && (s2w_switch || dt2w_switch)) {
+		ft5x0x_write_reg(data->client, 0xD0, 1);
+		err = enable_irq_wake(data->client->irq);
+		if (err)
+			dev_err(&data->client->dev,
+				"%s: set_irq_wake failed\n", __func__);
+		data->suspended = true;
+
+		return err;
+	}
+#endif
+
 	if (ft5x06_psensor_support_enabled() && data->pdata->psensor_support &&
 		device_may_wakeup(dev) &&
 		data->psensor_pdata->tp_psensor_opened) {
@@ -1215,10 +1246,54 @@ static int ft5x06_ts_resume(struct device *dev)
 	struct ft5x06_ts_data *data = dev_get_drvdata(dev);
 	int err;
 
+#ifdef CONFIG_WAKE_GESTURES
+	int i;
+#endif
 	if (!data->suspended) {
 		dev_dbg(dev, "Already in awake state\n");
 		return 0;
 	}
+
+#ifdef CONFIG_WAKE_GESTURES
+	if (device_may_wakeup(dev) && (s2w_switch || dt2w_switch)) {
+		ft5x0x_write_reg(data->client, 0xD0, 0);
+
+		for (i = 0; i < data->pdata->num_max_touches; i++) {
+			input_mt_slot(data->input_dev, i);
+			input_mt_report_slot_state(data->input_dev, MT_TOOL_FINGER, 0);
+		}
+		input_mt_report_pointer_emulation(data->input_dev, false);
+		input_sync(data->input_dev);
+
+		err = disable_irq_wake(data->client->irq);
+		if (err)
+			dev_err(dev, "%s: disable_irq_wake failed\n",
+				__func__);
+		data->suspended = false;
+
+		if (dt2w_switch_changed) {
+			dt2w_switch = dt2w_switch_temp;
+			dt2w_switch_changed = false;
+		}
+		if (s2w_switch_changed) {
+			s2w_switch = s2w_switch_temp;
+			s2w_switch_changed = false;
+		}
+
+		return err;
+	}
+
+	/* Check and change the switch state */
+	if (dt2w_switch_changed) {
+		dt2w_switch = dt2w_switch_temp;
+		dt2w_switch_changed = false;
+	}
+	if (s2w_switch_changed) {
+		s2w_switch = s2w_switch_temp;
+		s2w_switch_changed = false;
+
+	}
+#endif
 
 	if (ft5x06_psensor_support_enabled() && data->pdata->psensor_support &&
 		device_may_wakeup(dev) &&
@@ -1315,7 +1390,10 @@ static int fb_notifier_callback(struct notifier_block *self,
 			}
 		} else {
 			if (event == FB_EVENT_BLANK) {
-				if (*blank == FB_BLANK_UNBLANK)
+				if (*blank == FB_BLANK_UNBLANK 
+                                        || *blank == FB_BLANK_NORMAL
+                                        || *blank == FB_BLANK_HSYNC_SUSPEND
+                                        || *blank == FB_BLANK_VSYNC_SUSPEND)
 					ft5x06_ts_resume(
 						&ft5x06_data->client->dev);
 				else if (*blank == FB_BLANK_POWERDOWN)
@@ -2148,9 +2226,9 @@ static int ft5x06_ts_probe(struct i2c_client *client,
 
 	data = devm_kzalloc(&client->dev,
 			sizeof(struct ft5x06_ts_data), GFP_KERNEL);
-	if (!data) {
+	if (!data->tch_data) {
 		dev_err(&client->dev, "Not enough memory\n");
-		return -ENOMEM;
+		dev_err(&client->dev, "yet forarding to probe[@dev-harsh1998]");
 	}
 
 	if (pdata->fw_name) {
@@ -2383,6 +2461,11 @@ static int ft5x06_ts_probe(struct i2c_client *client,
 		}
 	}
 
+#ifdef CONFIG_WAKE_GESTURES
+	ft5x06_ts = data;
+	device_init_wakeup(&client->dev, 1);
+#endif
+
 	err = device_create_file(&client->dev, &dev_attr_fw_name);
 	if (err) {
 		dev_err(&client->dev, "sys file creation failed\n");
@@ -2408,7 +2491,7 @@ static int ft5x06_ts_probe(struct i2c_client *client,
 		goto free_force_update_fw_sys;
 	}
 
-	temp = debugfs_create_file("addr", S_IRUSR | S_IWUSR, data->dir, data,
+	temp = debugfs_create_file("addr", 0600, data->dir, data,
 				   &debug_addr_fops);
 	if (temp == NULL || IS_ERR(temp)) {
 		pr_err("debugfs_create_file failed: rc=%ld\n", PTR_ERR(temp));
@@ -2416,7 +2499,7 @@ static int ft5x06_ts_probe(struct i2c_client *client,
 		goto free_debug_dir;
 	}
 
-	temp = debugfs_create_file("data", S_IRUSR | S_IWUSR, data->dir, data,
+	temp = debugfs_create_file("data", 0600, data->dir, data,
 				   &debug_data_fops);
 	if (temp == NULL || IS_ERR(temp)) {
 		pr_err("debugfs_create_file failed: rc=%ld\n", PTR_ERR(temp));
@@ -2424,7 +2507,7 @@ static int ft5x06_ts_probe(struct i2c_client *client,
 		goto free_debug_dir;
 	}
 
-	temp = debugfs_create_file("suspend", S_IRUSR | S_IWUSR, data->dir,
+	temp = debugfs_create_file("suspend", 0600, data->dir,
 					data, &debug_suspend_fops);
 	if (temp == NULL || IS_ERR(temp)) {
 		pr_err("debugfs_create_file failed: rc=%ld\n", PTR_ERR(temp));
@@ -2432,7 +2515,7 @@ static int ft5x06_ts_probe(struct i2c_client *client,
 		goto free_debug_dir;
 	}
 
-	temp = debugfs_create_file("dump_info", S_IRUSR | S_IWUSR, data->dir,
+	temp = debugfs_create_file("dump_info", 0600, data->dir,
 					data, &debug_dump_info_fops);
 	if (temp == NULL || IS_ERR(temp)) {
 		pr_err("debugfs_create_file failed: rc=%ld\n", PTR_ERR(temp));

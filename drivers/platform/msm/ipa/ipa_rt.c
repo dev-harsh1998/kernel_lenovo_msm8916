@@ -1,4 +1,4 @@
-/* Copyright (c) 2012-2014, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2012-2018, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -1072,6 +1072,15 @@ int __ipa_del_rt_rule(u32 rule_hdl)
 		return -EINVAL;
 	}
 
+	if (!strcmp(entry->tbl->name, IPA_DFLT_RT_TBL_NAME)) {
+		IPADBG("Deleting rule from default rt table idx=%u\n",
+			entry->tbl->idx);
+		if (entry->tbl->rule_cnt == 1) {
+			IPAERR("Default tbl last rule cannot be deleted\n");
+			return -EINVAL;
+		}
+	}
+
 	if (entry->hdr)
 		__ipa_release_hdr(entry->hdr->id);
 	else if (entry->proc_ctx)
@@ -1464,3 +1473,4 @@ bail:
 	return result;
 }
 EXPORT_SYMBOL(ipa_mdfy_rt_rule);
+

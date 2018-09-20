@@ -120,6 +120,11 @@ int cpuidle_idle_call(void)
 	struct cpuidle_driver *drv;
 	int next_state, entered_state;
 
+	if (need_resched()) {
+		local_irq_enable();
+		return 0;
+	}
+
 	if (off)
 		return -ENODEV;
 
@@ -176,6 +181,7 @@ void cpuidle_install_idle_handler(void)
 		/* Make sure all changes finished before we switch to new idle */
 		smp_wmb();
 		initialized = 1;
+		kick_all_cpus_sync();
 	}
 }
 

@@ -182,18 +182,22 @@ static DEFINE_TIMER(seed_timer, __prandom_timer, 0, 0);
 static void __prandom_timer(unsigned long dontcare)
 {
 	u32 entropy;
+	unsigned long expires;
 
 	get_random_bytes(&entropy, sizeof(entropy));
 	prandom_seed(entropy);
+
 	/* reseed every ~60 seconds, in [40 .. 80) interval with slack */
-	seed_timer.expires = jiffies + (40 * HZ + (prandom_u32() % (40 * HZ)));
+	expires = 40 + (prandom_u32() % 40);
+	seed_timer.expires = jiffies + msecs_to_jiffies(expires * MSEC_PER_SEC);
+
 	add_timer(&seed_timer);
 }
 
 static void prandom_start_seed_timer(void)
 {
 	set_timer_slack(&seed_timer, HZ);
-	seed_timer.expires = jiffies + 40 * HZ;
+	seed_timer.expires = jiffies + msecs_to_jiffies(40 * MSEC_PER_SEC);
 	add_timer(&seed_timer);
 }
 
@@ -208,8 +212,19 @@ static void __prandom_reseed(bool late)
 	static bool latch = false;
 	static DEFINE_SPINLOCK(lock);
 
+	/* Asking for random bytes might result in bytes getting
+	 * moved into the nonblocking pool and thus marking it
+	 * as initialized. In this case we would double back into
+	 * this function and attempt to do a late reseed.
+	 * Ignore the pointless attempt to reseed again if we're
+	 * already waiting for bytes when the nonblocking pool
+	 * got initialized.
+	 */
+
 	/* only allow initial seeding (late == false) once */
-	spin_lock_irqsave(&lock, flags);
+	if (!spin_trylock_irqsave(&lock, flags))
+		return;
+
 	if (latch && !late)
 		goto out;
 	latch = true;

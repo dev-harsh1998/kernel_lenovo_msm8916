@@ -3565,3 +3565,4 @@ module_exit(msm_soc_platform_exit);
 
 MODULE_DESCRIPTION("Compress Offload platform driver");
 MODULE_LICENSE("GPL v2");
+

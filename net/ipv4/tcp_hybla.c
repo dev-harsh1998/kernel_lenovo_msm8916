@@ -29,7 +29,6 @@ static int rtt0 = 25;
 module_param(rtt0, int, 0644);
 MODULE_PARM_DESC(rtt0, "reference rout trip time (ms)");
 
-
 /* This is called to refresh values for hybla parameters */
 static inline void hybla_recalc_param (struct sock *sk)
 {
@@ -165,7 +164,6 @@ static void hybla_cong_avoid(struct sock *sk, u32 ack, u32 in_flight)
 static struct tcp_congestion_ops tcp_hybla __read_mostly = {
 	.init		= hybla_init,
 	.ssthresh	= tcp_reno_ssthresh,
-	.min_cwnd	= tcp_reno_min_cwnd,
 	.cong_avoid	= hybla_cong_avoid,
 	.set_state	= hybla_state,
 

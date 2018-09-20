@@ -1,6 +1,6 @@
 /*Qualcomm Secure Execution Environment Communicator (QSEECOM) driver
  *
- * Copyright (c) 2012-2017, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2012-2018, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -2272,12 +2272,13 @@ static int __qseecom_update_cmd_buf(void *msg, bool cleanup,
 				goto err;
 			if (cleanup)
 				*update = 0;
-			else
+			else {
 				*update = (uint32_t)sg_dma_address(
 							sg_ptr->sgl);
 				len += (uint32_t)sg->length;
 				if (qteec)
 					*(update + 1) = (uint32_t)sg->length;
+			}
 		} else {
 			struct qseecom_sg_entry *update;
 			int j = 0;
@@ -3286,6 +3287,23 @@ static int qseecom_get_qseos_version(struct qseecom_dev_handle *data,
 	req.qseos_version = qseecom.qseos_version;
 	if (copy_to_user(argp, &req, sizeof(req))) {
 		pr_err("copy_to_user failed");
+		return -EINVAL;
+	}
+	return 0;
+}
+
+static int qseecom_get_qsee_version(struct qseecom_dev_handle *data,
+						void __user *argp)
+{
+	struct qseecom_qsee_version_req req;
+
+	if (copy_from_user(&req, argp, sizeof(req))) {
+		pr_err("copy_from_user failed\n");
+		return -EINVAL;
+	}
+	req.qsee_version = qseecom.qsee_version;
+	if (copy_to_user(argp, &req, sizeof(req))) {
+		pr_err("copy_to_user failed\n");
 		return -EINVAL;
 	}
 	return 0;
@@ -4898,6 +4916,14 @@ long qseecom_ioctl(struct file *file, unsigned cmd, unsigned long arg)
 	case QSEECOM_IOCTL_GET_QSEOS_VERSION_REQ: {
 		atomic_inc(&data->ioctl_count);
 		ret = qseecom_get_qseos_version(data, argp);
+		if (ret)
+			pr_err("qseecom_get_qseos_version: %d\n", ret);
+		atomic_dec(&data->ioctl_count);
+		break;
+	}
+	case QSEECOM_IOCTL_GET_QSEE_VERSION_REQ: {
+		atomic_inc(&data->ioctl_count);
+		ret = qseecom_get_qsee_version(data, argp);
 		if (ret)
 			pr_err("qseecom_get_qseos_version: %d\n", ret);
 		atomic_dec(&data->ioctl_count);

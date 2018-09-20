@@ -320,11 +320,13 @@ static struct ip6_tnl *ip6gre_tunnel_locate(struct net *net,
 	if (t || !create)
 		return t;
 
-	if (parms->name[0])
+	if (parms->name[0]) {
+		if (!dev_valid_name(parms->name))
+			return NULL;
 		strlcpy(name, parms->name, IFNAMSIZ);
-	else
+	} else {
 		strcpy(name, "ip6gre%d");
-
+	}
 	dev = alloc_netdev(sizeof(*t), name, ip6gre_tunnel_setup);
 	if (!dev)
 		return NULL;
@@ -395,9 +397,8 @@ static void ip6gre_err(struct sk_buff *skb, struct inet6_skb_parm *opt,
 	greh = (const struct gre_base_hdr *)(skb->data + offset);
 	key = key_off ? *(__be32 *)(skb->data + key_off) : 0;
 
-	t = ip6gre_tunnel_lookup(skb->dev, &ipv6h->daddr, &ipv6h->saddr,
-				 key, greh->protocol);
-	if (t == NULL)
+	t = ip6gre_tunnel_lookup(skb->dev, &ipv6h->daddr, &ipv6h->saddr,key, greh->protocol);
+	if (!t)
 		return;
 
 	switch (type) {
@@ -1710,3 +1711,4 @@ MODULE_AUTHOR("D. Kozlov (xeb@mail.ru)");
 MODULE_DESCRIPTION("GRE over IPv6 tunneling device");
 MODULE_ALIAS_RTNL_LINK("ip6gre");
 MODULE_ALIAS_NETDEV("ip6gre0");
+

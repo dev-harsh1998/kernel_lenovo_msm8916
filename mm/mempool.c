@@ -37,6 +37,9 @@ static void *remove_element(mempool_t *pool)
  */
 void mempool_destroy(mempool_t *pool)
 {
+	if (unlikely(!pool))
+		return;
+
 	while (pool->curr_nr) {
 		void *element = remove_element(pool);
 		pool->free(element, pool->pool_data);
@@ -304,9 +307,9 @@ void mempool_free(void *element, mempool_t *pool)
 	 * ensures that there will be frees which return elements to the
 	 * pool waking up the waiters.
 	 */
-	if (pool->curr_nr < pool->min_nr) {
+	if (unlikely(pool->curr_nr < pool->min_nr)) {
 		spin_lock_irqsave(&pool->lock, flags);
-		if (pool->curr_nr < pool->min_nr) {
+		if (likely(pool->curr_nr < pool->min_nr)) {
 			add_element(pool, element);
 			spin_unlock_irqrestore(&pool->lock, flags);
 			wake_up(&pool->wait);

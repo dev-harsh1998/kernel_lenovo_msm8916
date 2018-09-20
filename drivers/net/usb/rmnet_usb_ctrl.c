@@ -1219,13 +1219,13 @@ skip_cudev_init:
 						     "%s%d", rmnet_dev_names[i],
 						     n);
 			if (IS_ERR(dev->devicep)) {
-				struct device *deviceptr = dev->devicep;
+				long status = PTR_ERR(dev->devicep);
 				pr_err("%s: device_create() returned %ld\n",
-					__func__, PTR_ERR(deviceptr));
+					__func__, status);
 				cdev_del(&dev->cdev);
 				free_rmnet_ctrl_udev(dev->cudev);
 				kfree(dev);
-				return PTR_ERR(deviceptr);
+				return status;
 			}
 
 			/*create /sys/class/hsicctl/hsicctlx/modem_wait*/
@@ -1279,3 +1279,4 @@ void rmnet_usb_ctrl_exit(int no_rmnet_devs, int no_rmnet_insts_per_dev,
 	kfree(ctrl_devs);
 	rmnet_usb_ctrl_debugfs_exit();
 }
+

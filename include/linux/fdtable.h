@@ -9,6 +9,7 @@
 #include <linux/compiler.h>
 #include <linux/spinlock.h>
 #include <linux/rcupdate.h>
+#include <linux/nospec.h>
 #include <linux/types.h>
 #include <linux/init.h>
 #include <linux/fs.h>
@@ -47,6 +48,9 @@ struct files_struct {
    * read mostly part
    */
 	atomic_t count;
+	bool resize_in_progress;
+	wait_queue_head_t resize_wait;
+
 	struct fdtable __rcu *fdt;
 	struct fdtable fdtab;
   /*
@@ -79,8 +83,10 @@ static inline struct file * fcheck_files(struct files_struct *files, unsigned in
 	struct file * file = NULL;
 	struct fdtable *fdt = files_fdtable(files);
 
-	if (fd < fdt->max_fds)
+	if (fd < fdt->max_fds) {
+		fd = array_index_nospec(fd, fdt->max_fds);
 		file = rcu_dereference_check_fdtable(files, fdt->fd[fd]);
+	}
 	return file;
 }
 

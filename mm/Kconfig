@@ -305,6 +305,7 @@ config MMU_NOTIFIER
 config KSM
 	bool "Enable KSM for page merging"
 	depends on MMU
+	default y
 	help
 	  Enable Kernel Samepage Merging: KSM periodically scans those areas
 	  of an application's address space that an app has advised may be
@@ -440,7 +441,7 @@ config NEED_PER_CPU_KM
 
 config CLEANCACHE
 	bool "Enable cleancache driver to cache clean pages if tmem is present"
-	default n
+	default y
 	help
 	  Cleancache can be thought of as a page-granularity victim cache
 	  for clean pages that the kernel's pageframe replacement algorithm
@@ -546,7 +547,7 @@ config GENERIC_EARLY_IOREMAP
 config PROCESS_RECLAIM
 	bool "Enable process reclaim"
 	depends on PROC_FS
-	default n
+	default y
 	help
 	 It allows to reclaim pages of the process by /proc/pid/reclaim.
 
@@ -599,4 +600,20 @@ config PGTABLE_MAPPING
 	  mapping rather than copying for object mapping.
 
 	  You can check speed with zsmalloc benchmark[1].
-	  [1] https://github.com/spartacus06/zsmalloc
+	  [1] https://github.com/spartacus06/zsmalloc.
+
+config VM_MAX_READAHEAD
+	int "default max readahead window size"
+	default 128
+	help
+	  This sets the VM_MAX_READAHEAD value to allow the readahead window
+	  to grow to a maximum size of configured. This will benefit sequential
+	  read throughput and thus early boot performance.
+
+config KSM_THREAD_SLEEPMS
+	int "default ms range when ksm should sleep between batches"
+	default 20
+	help
+	  This sets the default milliseconds range when ksm should sleep between
+	  batches. The implementatiion of this config is done to provide a window
+	  configurable via defconfig. If left untouched it defaults to stock 20ms.

@@ -13,6 +13,42 @@
 #include <trace/events/rpm.h>
 #include "power.h"
 
+#define RPM_GET_CALLBACK(dev, cb)				\
+({								\
+	int (*__rpm_cb)(struct device *__d);			\
+								\
+	if (dev->pm_domain)					\
+		__rpm_cb = dev->pm_domain->ops.cb;		\
+	else if (dev->type && dev->type->pm)			\
+		__rpm_cb = dev->type->pm->cb;			\
+	else if (dev->class && dev->class->pm)			\
+		__rpm_cb = dev->class->pm->cb;			\
+	else if (dev->bus && dev->bus->pm)			\
+		__rpm_cb = dev->bus->pm->cb;			\
+	else							\
+		__rpm_cb = NULL;				\
+								\
+	if (!__rpm_cb && dev->driver && dev->driver->pm)	\
+		__rpm_cb = dev->driver->pm->cb;			\
+								\
+	__rpm_cb;						\
+})
+
+static int (*rpm_get_suspend_cb(struct device *dev))(struct device *)
+{
+	return RPM_GET_CALLBACK(dev, runtime_suspend);
+}
+
+static int (*rpm_get_resume_cb(struct device *dev))(struct device *)
+{
+	return RPM_GET_CALLBACK(dev, runtime_resume);
+}
+
+static int (*rpm_get_idle_cb(struct device *dev))(struct device *)
+{
+	return RPM_GET_CALLBACK(dev, runtime_idle);
+}
+
 static int rpm_resume(struct device *dev, int rpmflags);
 static int rpm_suspend(struct device *dev, int rpmflags);
 
@@ -311,19 +347,7 @@ static int rpm_idle(struct device *dev, int rpmflags)
 
 	dev->power.idle_notification = true;
 
-	if (dev->pm_domain)
-		callback = dev->pm_domain->ops.runtime_idle;
-	else if (dev->type && dev->type->pm)
-		callback = dev->type->pm->runtime_idle;
-	else if (dev->class && dev->class->pm)
-		callback = dev->class->pm->runtime_idle;
-	else if (dev->bus && dev->bus->pm)
-		callback = dev->bus->pm->runtime_idle;
-	else
-		callback = NULL;
-
-	if (!callback && dev->driver && dev->driver->pm)
-		callback = dev->driver->pm->runtime_idle;
+	callback = rpm_get_idle_cb(dev);
 
 	if (callback)
 		__rpm_callback(callback, dev);
@@ -493,19 +517,7 @@ static int rpm_suspend(struct device *dev, int rpmflags)
 
 	__update_runtime_status(dev, RPM_SUSPENDING);
 
-	if (dev->pm_domain)
-		callback = dev->pm_domain->ops.runtime_suspend;
-	else if (dev->type && dev->type->pm)
-		callback = dev->type->pm->runtime_suspend;
-	else if (dev->class && dev->class->pm)
-		callback = dev->class->pm->runtime_suspend;
-	else if (dev->bus && dev->bus->pm)
-		callback = dev->bus->pm->runtime_suspend;
-	else
-		callback = NULL;
-
-	if (!callback && dev->driver && dev->driver->pm)
-		callback = dev->driver->pm->runtime_suspend;
+	callback = rpm_get_suspend_cb(dev);
 
 	retval = rpm_callback(callback, dev);
 	if (retval)
@@ -725,19 +737,7 @@ static int rpm_resume(struct device *dev, int rpmflags)
 
 	__update_runtime_status(dev, RPM_RESUMING);
 
-	if (dev->pm_domain)
-		callback = dev->pm_domain->ops.runtime_resume;
-	else if (dev->type && dev->type->pm)
-		callback = dev->type->pm->runtime_resume;
-	else if (dev->class && dev->class->pm)
-		callback = dev->class->pm->runtime_resume;
-	else if (dev->bus && dev->bus->pm)
-		callback = dev->bus->pm->runtime_resume;
-	else
-		callback = NULL;
-
-	if (!callback && dev->driver && dev->driver->pm)
-		callback = dev->driver->pm->runtime_resume;
+	callback = rpm_get_resume_cb(dev);
 
 	retval = rpm_callback(callback, dev);
 	if (retval) {
@@ -746,6 +746,7 @@ static int rpm_resume(struct device *dev, int rpmflags)
 	} else {
  no_callback:
 		__update_runtime_status(dev, RPM_ACTIVE);
+		pm_runtime_mark_last_busy(dev);
 		if (parent)
 			atomic_inc(&parent->power.child_count);
 	}
@@ -888,12 +889,12 @@ int __pm_runtime_idle(struct device *dev, int rpmflags)
 	unsigned long flags;
 	int retval;
 
-	might_sleep_if(!(rpmflags & RPM_ASYNC) && !dev->power.irq_safe);
-
 	if (rpmflags & RPM_GET_PUT) {
 		if (!atomic_dec_and_test(&dev->power.usage_count))
 			return 0;
 	}
+
+	might_sleep_if(!(rpmflags & RPM_ASYNC) && !dev->power.irq_safe);
 
 	spin_lock_irqsave(&dev->power.lock, flags);
 	retval = rpm_idle(dev, rpmflags);
@@ -920,12 +921,12 @@ int __pm_runtime_suspend(struct device *dev, int rpmflags)
 	unsigned long flags;
 	int retval;
 
-	might_sleep_if(!(rpmflags & RPM_ASYNC) && !dev->power.irq_safe);
-
 	if (rpmflags & RPM_GET_PUT) {
 		if (!atomic_dec_and_test(&dev->power.usage_count))
 			return 0;
 	}
+
+	might_sleep_if(!(rpmflags & RPM_ASYNC) && !dev->power.irq_safe);
 
 	spin_lock_irqsave(&dev->power.lock, flags);
 	retval = rpm_suspend(dev, rpmflags);
@@ -951,7 +952,8 @@ int __pm_runtime_resume(struct device *dev, int rpmflags)
 	unsigned long flags;
 	int retval;
 
-	might_sleep_if(!(rpmflags & RPM_ASYNC) && !dev->power.irq_safe);
+	might_sleep_if(!(rpmflags & RPM_ASYNC) && !dev->power.irq_safe &&
+			dev->power.runtime_status != RPM_ACTIVE);
 
 	if (rpmflags & RPM_GET_PUT)
 		atomic_inc(&dev->power.usage_count);
@@ -1231,7 +1233,7 @@ void pm_runtime_allow(struct device *dev)
 
 	dev->power.runtime_auto = true;
 	if (atomic_dec_and_test(&dev->power.usage_count))
-		rpm_idle(dev, RPM_AUTO);
+		rpm_idle(dev, RPM_AUTO | RPM_ASYNC);
 
  out:
 	spin_unlock_irq(&dev->power.lock);
@@ -1389,16 +1391,30 @@ void pm_runtime_init(struct device *dev)
 }
 
 /**
+ * pm_runtime_reinit - Re-initialize runtime PM fields in given device object.
+ * @dev: Device object to re-initialize.
+ */
+void pm_runtime_reinit(struct device *dev)
+{
+	if (!pm_runtime_enabled(dev)) {
+		if (dev->power.runtime_status == RPM_ACTIVE)
+			pm_runtime_set_suspended(dev);
+		if (dev->power.irq_safe) {
+			spin_lock_irq(&dev->power.lock);
+			dev->power.irq_safe = 0;
+			spin_unlock_irq(&dev->power.lock);
+			if (dev->parent)
+				pm_runtime_put(dev->parent);
+		}
+	}
+}
+
+/**
  * pm_runtime_remove - Prepare for removing a device from device hierarchy.
  * @dev: Device object being removed from device hierarchy.
  */
 void pm_runtime_remove(struct device *dev)
 {
 	__pm_runtime_disable(dev, false);
-
-	/* Change the status back to 'suspended' to match the initial status. */
-	if (dev->power.runtime_status == RPM_ACTIVE)
-		pm_runtime_set_suspended(dev);
-	if (dev->power.irq_safe && dev->parent)
-		pm_runtime_put(dev->parent);
+	pm_runtime_reinit(dev);
 }

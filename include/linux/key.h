@@ -45,7 +45,7 @@ struct key;
 #define KEY_POS_LINK	0x10000000	/* possessor can create a link to a key/keyring */
 #define KEY_POS_SETATTR	0x20000000	/* possessor can set key attributes */
 #define KEY_POS_ALL	0x3f000000
-
+#define	KEY_NEED_WRITE	0x04
 #define KEY_USR_VIEW	0x00010000	/* user permissions... */
 #define KEY_USR_READ	0x00020000
 #define KEY_USR_WRITE	0x00040000
