@@ -497,4 +497,6 @@ void acct_update_power(struct task_struct *p, cputime_t cputime);
 static inline void acct_update_power(struct task_struct *p, cputime_t cputime) {}
 #endif
 
+bool StreamStatus(void);
+
 #endif /* _LINUX_CPUFREQ_H */
