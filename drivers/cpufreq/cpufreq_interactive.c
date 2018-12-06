@@ -1104,6 +1104,27 @@ static ssize_t store_timer_slack(struct cpufreq_interactive_tunables *tunables,
 	return count;
 }
 
+static ssize_t showStreamFreq(struct kobject *kobj, struct attribute *attr,
+			  char *buf)
+{
+	return sprintf(buf, "%lu\n", InStreamFreq);
+}
+
+static ssize_t storeStreamFreq(struct kobject *kobj, struct attribute *attr,
+			   const char *buf, size_t count)
+{
+	int ret;
+	unsigned long val;
+
+ 	ret = strict_strtoul(buf, 0, &val);
+
+	if (ret < 0)
+		return ret;
+
+	InStreamFreq = val < 0 ? MAX_STREAM_FREQ : val;
+	return count;
+}
+
 static ssize_t show_boost(struct cpufreq_interactive_tunables *tunables,
 			  char *buf)
 {
@@ -1426,6 +1447,12 @@ static struct global_attr boostpulse_gov_sys =
 static struct freq_attr boostpulse_gov_pol =
 	__ATTR(boostpulse, 0200, NULL, store_boostpulse_gov_pol);
 
+static struct global_attr streamFreq_attr_sys = __ATTR(InStreamFreq, 0644,
+                showStreamFreq, storeStreamFreq);
+
+static struct freq_attr streamFreq_attr_pol = __ATTR(InStreamFreq, 0644,
+                showStreamFreq, storeStreamFreq);
+
 /* One Governor instance for entire system */
 static struct attribute *interactive_attributes_gov_sys[] = {
 	&target_loads_gov_sys.attr,
@@ -1435,6 +1462,7 @@ static struct attribute *interactive_attributes_gov_sys[] = {
 	&min_sample_time_gov_sys.attr,
 	&timer_rate_gov_sys.attr,
 	&timer_slack_gov_sys.attr,
+	&streamFreq_attr_sys.attr,
 	&boost_gov_sys.attr,
 	&boostpulse_gov_sys.attr,
 	&boostpulse_duration_gov_sys.attr,
@@ -1460,6 +1488,7 @@ static struct attribute *interactive_attributes_gov_pol[] = {
 	&min_sample_time_gov_pol.attr,
 	&timer_rate_gov_pol.attr,
 	&timer_slack_gov_pol.attr,
+	&streamFreq_attr_pol.attr,
 	&boost_gov_pol.attr,
 	&boostpulse_gov_pol.attr,
 	&boostpulse_duration_gov_pol.attr,
