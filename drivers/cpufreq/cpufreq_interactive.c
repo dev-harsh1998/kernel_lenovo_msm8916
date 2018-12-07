@@ -698,8 +698,10 @@ static int cpufreq_interactive_speedchange_task(void *data)
 			/* dev-harsh1998: check status and change max_freq
 			 * change the max_freq only if higher than last one
 			 */
-			if (AreWeStreaming() && InStreamFreq < max_freq)
-				max_freq = InStreamFreq;
+			if (AreWeStreaming() && InStreamFreq < max_freq) {
+				if (InStreamFreq > 0)
+					max_freq = InStreamFreq;
+			}
 
 			if (max_freq != pcpu->policy->cur) {
 				__cpufreq_driver_target(pcpu->policy,
