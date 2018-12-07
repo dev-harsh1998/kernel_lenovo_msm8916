@@ -1450,7 +1450,7 @@ static struct freq_attr boostpulse_gov_pol =
 static struct global_attr streamFreq_attr_sys = __ATTR(InStreamFreq, 0644,
                 showStreamFreq, storeStreamFreq);
 
-static struct freq_attr streamFreq_attr_pol = __ATTR(InStreamFreq, 0644,
+static struct global_attr streamFreq_attr_pol = __ATTR(InStreamFreq, 0644,
                 showStreamFreq, storeStreamFreq);
 
 /* One Governor instance for entire system */
