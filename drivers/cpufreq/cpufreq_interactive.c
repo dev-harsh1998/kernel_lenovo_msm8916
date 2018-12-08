@@ -144,7 +144,7 @@ struct cpufreq_interactive_tunables {
 };
 
 /* dev-harsh1998: limit max bg freq to 800mhz if we're playing videos */
-static unsigned long InStreamFreq = CPU_INSTREAM_FREQ;
+static unsigned long InStreamFreq = CONFIG_CPU_INSTREAM_FREQ;
 static bool AreWeStreaming(void)
 {
 	return StreamStatus();
@@ -1121,7 +1121,7 @@ static ssize_t storeStreamFreq(struct kobject *kobj, struct attribute *attr,
 	if (ret < 0)
 		return ret;
 
-	InStreamFreq = val < 0 ? CPU_INSTREAM_FREQ : val;
+	InStreamFreq = val < 0 ? CONFIG_CPU_INSTREAM_FREQ : val;
 	return count;
 }
 
