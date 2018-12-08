@@ -20,6 +20,16 @@ if CPU_FREQ
 config CPU_FREQ_GOV_COMMON
 	bool
 
+config CPU_INSTREAM_FREQ
+	int "set the default boundry frequency limit while device is in video session"
+	default 998400
+	help
+	  This config sets the default streaming frequency for the instance
+	  time when the cpu is streaming. The goal of this implementation is
+	  to provide an easy tunable option altering which from the defconfig
+          itself the user can change the boundry range if this config isn't
+	  touched the default would be set to 1Ghz (998mhz).
+
 config SCHED_FREQ_INPUT
 	bool "Scheduler inputs to cpufreq governor"
 	depends on SCHED_HMP
