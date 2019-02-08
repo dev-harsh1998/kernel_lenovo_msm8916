@@ -21,6 +21,7 @@
 #include <linux/rtmutex.h>
 #include <linux/vmalloc.h>
 #include <linux/slab.h>
+#include <uapi/linux/android/binder.h>
 
 struct binder_transaction;
 
@@ -163,5 +164,13 @@ binder_alloc_get_user_buffer_offset(struct binder_alloc *alloc)
 	return alloc->user_buffer_offset;
 }
 
+unsigned long
+binder_alloc_copy_user_to_buffer(struct binder_alloc *alloc,
+				 struct binder_buffer *buffer,
+				 binder_size_t buffer_offset,
+				 const void __user *from,
+				 size_t bytes);
+
 #endif /* _LINUX_BINDER_ALLOC_H */
+
 
