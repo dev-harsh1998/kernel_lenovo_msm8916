@@ -67,7 +67,7 @@ CONFIG_QCOM_ESE_UPLOAD := n
 # Feature flags which are not (currently) configurable via Kconfig
 
 #Whether to build debug version
-BUILD_DEBUG_VERSION := 0
+BUILD_DEBUG_VERSION := 1
 
 #Enable this flag to build driver in diag version
 BUILD_DIAG_VERSION := 1
@@ -88,6 +88,31 @@ HAVE_CFG80211 := 0
 endif
 endif
 
+ifeq ($(KERNEL_BUILD), 0)
+ifeq ($(WLAN_PROPRIETARY),1)
+    WLAN_BLD_DIR := vendor/qcom/proprietary/wlan
+else
+ifneq ($(TARGET_SUPPORTS_WEARABLES),true)
+ifneq ($(ANDROID_BUILD_TOP),)
+    WLAN_BLD_DIR := $(ANDROID_BUILD_TOP)/vendor/qcom/opensource/wlan
+else
+    WLAN_BLD_DIR := vendor/qcom/opensource/wlan
+endif # ANDROID_BUILD_TOP
+else
+ifneq ($(ANDROID_BUILD_TOP),)
+    WLAN_BLD_DIR := $(ANDROID_BUILD_TOP)/device/qcom/msm8909w/opensource/wlan
+else
+    WLAN_BLD_DIR := device/qcom/msm8909w/opensource/wlan
+endif # ANDROID_BUILD_TOP
+endif # TARGET_SUPPORTS_WEARABLES
+endif # WLAN_PROPRIETARY
+
+ifneq ($(ANDROID_BUILD_TOP),)
+WLAN_ROOT=$(WLAN_BLD_DIR)/prima
+else
+WLAN_ROOT=$(KERNEL_TO_BUILD_ROOT_OFFSET)$(WLAN_BLD_DIR)/prima
+endif # ANDROID_BUILD_TOP
+endif # KERNEL_BUILD
 
 ifeq ($(CONFIG_PRIMA_WLAN_BTAMP),y)
 ############ BAP ############
@@ -720,7 +745,7 @@ ifneq ($(wildcard $(srctree)/arch/$(SRCARCH)/mach-msm/include/mach/msm_smsm.h),)
 CDEFINES += -DEXISTS_MSM_SMSM
 endif
 
-# Fix build for GCC 6+
+# Fix build for GCC 6.0
 EXTRA_CFLAGS += -Wno-maybe-uninitialized -Wno-unused-function -Wno-unused-variable -Wno-misleading-indentation -Wno-discarded-array-qualifiers
 
 ifeq ($(CONFIG_WLAN_OFFLOAD_PACKETS),y)
