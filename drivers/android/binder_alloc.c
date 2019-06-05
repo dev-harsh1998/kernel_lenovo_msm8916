@@ -256,8 +256,7 @@ free_range:
 	     page_addr -= PAGE_SIZE) {
 		page = &alloc->pages[(page_addr - alloc->buffer) / PAGE_SIZE];
 		if (vma)
-			zap_page_range(vma, (uintptr_t)page_addr +
-				alloc->user_buffer_offset, PAGE_SIZE, NULL);
+			zap_page_range(vma, (uintptr_t)page_addr, PAGE_SIZE, NULL);
 err_vm_insert_page_failed:
 		__free_page(*page);
 		*page = NULL;
