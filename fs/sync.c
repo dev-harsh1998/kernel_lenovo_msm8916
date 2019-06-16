@@ -106,7 +106,7 @@ static void fdatawait_one_bdev(struct block_device *bdev, void *arg)
  * just write metadata (such as inodes or bitmaps) to block device page cache
  * and do not sync it on their own in ->sync_fs().
  */
-static void do_sync(void)
+void do_sync(void)
 {
 	int nowait = 0, wait = 1;
 

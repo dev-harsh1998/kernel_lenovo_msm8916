@@ -279,6 +279,7 @@ struct ft5x06_ts_data {
 static int ft5x06_ts_start(struct device *dev);
 static int ft5x06_ts_stop(struct device *dev);
 
+extern void do_sync(void);
 struct ft5x06_ts_data *screen_suspend_check = NULL;
 bool is_touch_screen_suspended(void){
 	return screen_suspend_check->suspended;
@@ -1207,6 +1208,8 @@ static int ft5x06_ts_suspend(struct device *dev)
 		dev_info(dev, "Already in suspend state\n");
 		return 0;
 	}
+
+	do_sync();
 
 #ifdef CONFIG_WAKE_GESTURES
 	if (device_may_wakeup(dev) && (s2w_switch || dt2w_switch)) {
