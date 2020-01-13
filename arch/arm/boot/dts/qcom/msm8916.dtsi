@@ -24,10 +24,6 @@
 
 	interrupt-parent = <&intc>;
 
-	chosen {
-		bootargs = "sched_enable_hmp=1";
-	};
-
         firmware: firmware {
                  android {
                          compatible = "android,firmware";
