@@ -1921,7 +1921,7 @@ EXPORT_SYMBOL_GPL(cgroup_taskset_size);
 		if (!memcmp(cgrp->name->name, "top-app", sizeof("top-app")) && tsk->cred->uid > 10000)
 			set_task_ioprio(tsk, IOPRIO_PRIO_VALUE(1, 6));
 		else
-			set_task_ioprio(tsk, IOPRIO_PRIO_VALUE(IOPRIO_CLASS_NONE, IOPRIO_NORM));
+			set_task_ioprio(tsk, IOPRIO_PRIO_VALUE(IOPRIO_CLASS_NONE, 0));
 	}
 
 /*
