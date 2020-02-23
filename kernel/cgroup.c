@@ -60,6 +60,8 @@
 #include <linux/poll.h>
 #include <linux/flex_array.h> /* used in cgroup_attach_task */
 #include <linux/kthread.h>
+#include <linux/sched/sysctl.h>
+#include <linux/ioprio.h>
 
 #include <linux/atomic.h>
 
@@ -191,6 +193,8 @@ struct cgroup_event {
 	wait_queue_t wait;
 	struct work_struct remove;
 };
+
+unsigned int sysctl_iosched_boost_top_app = 0;
 
 /* The list of hierarchy roots */
 
@@ -1912,6 +1916,13 @@ int cgroup_taskset_size(struct cgroup_taskset *tset)
 }
 EXPORT_SYMBOL_GPL(cgroup_taskset_size);
 
+	if (sysctl_iosched_boost_top_app == 1)
+	{
+		if (!memcmp(cgrp->name->name, "top-app", sizeof("top-app")) && tsk->cred->uid > 10000)
+			set_task_ioprio(tsk, IOPRIO_PRIO_VALUE(1, 6));
+		else
+			set_task_ioprio(tsk, IOPRIO_PRIO_VALUE(IOPRIO_CLASS_NONE, IOPRIO_NORM));
+	}
 
 /*
  * cgroup_task_migrate - move a task from one cgroup to another.
