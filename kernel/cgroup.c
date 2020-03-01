@@ -1916,16 +1916,6 @@ int cgroup_taskset_size(struct cgroup_taskset *tset)
 }
 EXPORT_SYMBOL_GPL(cgroup_taskset_size);
 
-	if (sysctl_iosched_boost_top_app == 1)
-	{
-		if (!memcmp(cgrp->name->name, "top-app", sizeof("top-app")) && tsk->cred->uid > 10000)
-			set_task_ioprio(tsk, IOPRIO_PRIO_VALUE(IOPRIO_CLASS_RT, 6));
-		else if ((!memcmp(cgrp->name->name, "background", sizeof("background")) || !memcmp(cgrp->name->name, "system-background", sizeof("system-background"))) && tsk->cred->uid > 10000)
-			set_task_ioprio(tsk, IOPRIO_PRIO_VALUE(IOPRIO_CLASS_IDLE, 0));
-		else
-			set_task_ioprio(tsk, IOPRIO_PRIO_VALUE(IOPRIO_CLASS_NONE, 0));
-	}
-
 /*
  * cgroup_task_migrate - move a task from one cgroup to another.
  *
@@ -2192,6 +2182,16 @@ retry_find_task:
 	}
 
 	ret = cgroup_attach_task(cgrp, tsk, threadgroup);
+
+	if (sysctl_iosched_boost_top_app == 1)
+	{
+		if (!memcmp(cgrp->name->name, "top-app", sizeof("top-app")) && tsk->cred->uid > 10000)
+			set_task_ioprio(tsk, IOPRIO_PRIO_VALUE(IOPRIO_CLASS_RT, 6));
+		else if ((!memcmp(cgrp->name->name, "background", sizeof("background")) || !memcmp(cgrp->name->name, "system-background", sizeof("system-background"))) && tsk->cred->uid > 10000)
+			set_task_ioprio(tsk, IOPRIO_PRIO_VALUE(IOPRIO_CLASS_IDLE, 0));
+		else
+			set_task_ioprio(tsk, IOPRIO_PRIO_VALUE(IOPRIO_CLASS_NONE, 0));
+	}
 
 	threadgroup_unlock(tsk);
 
