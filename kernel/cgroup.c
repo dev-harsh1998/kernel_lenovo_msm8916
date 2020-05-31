@@ -194,7 +194,7 @@ struct cgroup_event {
 	struct work_struct remove;
 };
 
-unsigned int sysctl_iosched_boost_top_app = 0;
+unsigned int sysctl_iosched_boost_top_app = 1;
 
 /* The list of hierarchy roots */
 
