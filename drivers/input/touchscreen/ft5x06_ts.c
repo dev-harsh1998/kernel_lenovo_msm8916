@@ -34,6 +34,15 @@
 #include <linux/sensors.h>
 #include <linux/input/ft5x06_ts.h>
 
+#if (defined(CONFIG_TOUCHSCREEN_DOUBLETAP2WAKE) && !defined(CONFIG_TOUCHSCREEN_SWEEP2WAKE))
+#include <linux/input/doubletap2wake.h>
+#elif (defined(CONFIG_TOUCHSCREEN_SWEEP2WAKE) && !defined(CONFIG_TOUCHSCREEN_DOUBLETAP2WAKE))
+#include <linux/input/sweep2wake.h>
+#elif (defined(CONFIG_TOUCHSCREEN_DOUBLETAP2WAKE) && defined(CONFIG_TOUCHSCREEN_SWEEP2WAKE))
+#include <linux/input/doubletap2wake.h>
+#include <linux/input/sweep2wake.h>
+#endif
+
 #if defined(CONFIG_FB)
 #include <linux/notifier.h>
 #include <linux/fb.h>
@@ -284,11 +293,6 @@ struct ft5x06_ts_data *ft5x06_ts = NULL;
 bool is_touch_screen_suspended(void){
 	return ft5x06_ts->suspended;
 }
-
-#ifdef CONFIG_INTELLI_PLUG
-extern void intelli_plug_suspend(void);
-extern void __ref intelli_plug_resume(void);
-#endif
 
 static struct sensors_classdev __maybe_unused sensors_proximity_cdev = {
 	.name = "ft5x06-proximity",
@@ -1199,10 +1203,59 @@ pwr_off_fail:
 	return err;
 }
 
+#if (defined(CONFIG_TOUCHSCREEN_DOUBLETAP2WAKE) || defined(CONFIG_TOUCHSCREEN_SWEEP2WAKE))
+static bool ev_btn_status = false;
+static bool ft5x06_irq_active = false;
+static void ft5x06_irq_handler(int irq, bool active)
+{
+	if (active) {
+		if (!ft5x06_irq_active) {
+			enable_irq_wake(irq);
+			ft5x06_irq_active = true;
+		}
+	} else {
+		if (ft5x06_irq_active) {
+			disable_irq_wake(irq);
+			ft5x06_irq_active = false;
+		}
+	}
+}
+#endif
+
 static int ft5x06_ts_suspend(struct device *dev)
 {
 	struct ft5x06_ts_data *data = dev_get_drvdata(dev);
 	int err;
+
+#if (defined(CONFIG_TOUCHSCREEN_DOUBLETAP2WAKE) || defined(CONFIG_TOUCHSCREEN_SWEEP2WAKE))
+	char i;
+#endif
+
+#if (defined(CONFIG_TOUCHSCREEN_DOUBLETAP2WAKE) && !defined(CONFIG_TOUCHSCREEN_SWEEP2WAKE))
+	if (dt2w_switch > 0 && !gesture_incall) {
+#elif (defined(CONFIG_TOUCHSCREEN_SWEEP2WAKE) && !defined(CONFIG_TOUCHSCREEN_DOUBLETAP2WAKE))
+	if (s2w_switch == 1 && !gesture_incall) {
+#elif (defined(CONFIG_TOUCHSCREEN_DOUBLETAP2WAKE) && defined(CONFIG_TOUCHSCREEN_SWEEP2WAKE))
+	if ((dt2w_switch > 0 || s2w_switch == 1) &&
+		!gesture_incall) {
+#endif
+#if (defined(CONFIG_TOUCHSCREEN_DOUBLETAP2WAKE) || defined(CONFIG_TOUCHSCREEN_SWEEP2WAKE))
+		if (!ev_btn_status) {
+			/* release all touches */
+			for (i = 0; i < data->pdata->num_max_touches; i++) {
+				input_mt_slot(data->input_dev, i);
+				input_mt_report_slot_state(data->input_dev, MT_TOOL_FINGER, 0);
+			}
+			input_mt_report_pointer_emulation(data->input_dev, false);
+			__clear_bit(BTN_TOUCH, data->input_dev->keybit);
+			input_sync(data->input_dev);
+			ev_btn_status = true;
+		}
+		ft5x06_irq_handler(data->client->irq, true);
+
+		return 0;
+	}
+#endif
 
 	if (data->loading_fw) {
 		dev_info(dev, "Firmware loading in process...\n");
@@ -1215,10 +1268,6 @@ static int ft5x06_ts_suspend(struct device *dev)
 	}
 
 	do_sync();
-
-#ifdef CONFIG_INTELLI_PLUG
-	intelli_plug_resume();
-#endif
 
 #ifdef CONFIG_WAKE_GESTURES
 	if (device_may_wakeup(dev) && (s2w_switch || dt2w_switch)) {
@@ -1266,12 +1315,25 @@ static int ft5x06_ts_resume(struct device *dev)
 	struct ft5x06_ts_data *data = dev_get_drvdata(dev);
 	int err;
 
-#ifdef CONFIG_WAKE_GESTURES
-	int i;
+#if (defined(CONFIG_TOUCHSCREEN_DOUBLETAP2WAKE) && !defined(CONFIG_TOUCHSCREEN_SWEEP2WAKE))
+	if (dt2w_switch > 0) {
+#elif (defined(CONFIG_TOUCHSCREEN_SWEEP2WAKE) && !defined(CONFIG_TOUCHSCREEN_DOUBLETAP2WAKE))
+	if (s2w_switch == 1) {
+#elif (defined(CONFIG_TOUCHSCREEN_DOUBLETAP2WAKE) && defined(CONFIG_TOUCHSCREEN_SWEEP2WAKE))
+	if (dt2w_switch > 0 || s2w_switch == 1) {
+#endif
+#if (defined(CONFIG_TOUCHSCREEN_DOUBLETAP2WAKE) || defined(CONFIG_TOUCHSCREEN_SWEEP2WAKE))
+		if (ev_btn_status) {
+			__set_bit(BTN_TOUCH, data->input_dev->keybit);
+			input_sync(data->input_dev);
+			ev_btn_status = false;
+		}		
+		ft5x06_irq_handler(data->client->irq, false);
+	}
 #endif
 
-#ifdef CONFIG_INTELLI_PLUG
-	intelli_plug_suspend();
+#ifdef CONFIG_WAKE_GESTURES
+	int i;
 #endif
 
 	if (!data->suspended) {

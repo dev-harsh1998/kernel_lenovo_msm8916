@@ -1076,4 +1076,12 @@ config TOUCHSCREEN_IT7260_I2C
 config WAKE_GESTURES
 	bool "wake gestures"
 
+config TOUCHSCREEN_SWEEP2WAKE
+    bool "Sweep2Wake for touchscreens"
+	depends on !TOUCHSCREEN_FT5X06_GESTURE
+
+config TOUCHSCREEN_DOUBLETAP2WAKE
+	bool "DoubleTap2Wake for touchscreens"
+	depends on !TOUCHSCREEN_FT5X06_GESTURE
+	
 endif
