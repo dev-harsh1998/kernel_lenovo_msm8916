@@ -36,11 +36,11 @@
 #define DEFAULT_HISTORY_SIZE		10
 #define DEFAULT_DOWN_LOCK_DUR		500
 #define DEFAULT_BOOST_LOCK_DUR		2500 * 1000L
-#define DEFAULT_NR_CPUS_BOOSTED		NR_CPUS / 2
-#define DEFAULT_MIN_CPUS_ONLINE		1
+#define DEFAULT_NR_CPUS_BOOSTED		1
+#define DEFAULT_MIN_CPUS_ONLINE		2
 #define DEFAULT_MAX_CPUS_ONLINE		NR_CPUS
 #define DEFAULT_FAST_LANE_LOAD		300
-#define DEFAULT_MAX_CPUS_ONLINE_SUSP	2
+#define DEFAULT_MAX_CPUS_ONLINE_SUSP	1
 
 static unsigned int debug = 0;
 module_param_named(debug_mask, debug, uint, 0644);
@@ -130,7 +130,7 @@ struct cpu_load_data {
 
 static DEFINE_PER_CPU(struct cpu_load_data, cpuload);
 
-static bool io_is_busy;
+static bool io_is_busy = true;
 bool fast_lane_mode;
 
 static int update_average_load(unsigned int cpu)
