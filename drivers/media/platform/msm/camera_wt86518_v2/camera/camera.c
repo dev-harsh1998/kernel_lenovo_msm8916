@@ -28,6 +28,10 @@
 #include <linux/platform_device.h>
 #include <media/v4l2-fh.h>
 
+#ifdef CONFIG_WAKE_GESTURES
+#include <linux/wake_gestures.h>
+#endif
+
 #include "camera.h"
 #include "msm.h"
 #include "msm_vb2.h"
@@ -555,6 +559,11 @@ static int camera_v4l2_open(struct file *filep)
 				__func__, __LINE__, rc);
 		goto vb2_q_fail;
 	}
+
+#ifdef CONFIG_WAKE_GESTURES
+	s2w_switch = 0;
+	dt2w_switch = 0;
+#endif
 
 	if (!atomic_read(&pvdev->opened)) {
 		pm_stay_awake(&pvdev->vdev->dev);
